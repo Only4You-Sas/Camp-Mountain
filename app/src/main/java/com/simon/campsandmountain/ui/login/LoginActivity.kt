@@ -2,6 +2,7 @@ package com.simon.campsandmountain.ui.login
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.EditText
 import android.widget.TextView
@@ -9,72 +10,108 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
 import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.simon.campsandmountain.MainActivity
 import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.repository.AuthRepository
+import com.simon.campsandmountain.ui.registro.RegistroActivity
 
 class LoginActivity : AppCompatActivity() {
 
+    private lateinit var mAuth: FirebaseAuth
     private lateinit var firebaseAnalytics: FirebaseAnalytics
+
+    private lateinit var txtCorreo: EditText
+    private lateinit var txtPass: EditText
+    private lateinit var tvError: TextView
+
+    companion object {
+        private const val TAG = "LoginActivity"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        mAuth = FirebaseAuth.getInstance()
         firebaseAnalytics = FirebaseAnalytics.getInstance(this)
 
-        if (AuthRepository.isLoggedIn()) {
-            navigateToMain()
+        if (mAuth.currentUser != null) {
+            AuthRepository.fetchUserData {
+                navigateToMain()
+            }
             return
         }
 
         setContentView(R.layout.activity_login)
+        title = "Inicio de sesión"
 
-        val etUsername = findViewById<EditText>(R.id.etUsername)
-        val etPassword = findViewById<EditText>(R.id.etPassword)
-        val tvError = findViewById<TextView>(R.id.tvError)
-        val btnLogin = findViewById<MaterialButton>(R.id.btnLogin)
-        val btnQuickDemo = findViewById<MaterialButton>(R.id.btnQuickDemo)
+        txtCorreo = findViewById(R.id.txtCorreo)
+        txtPass = findViewById(R.id.txtPass)
+        tvError = findViewById(R.id.tvError)
 
-        btnLogin.setOnClickListener {
-            val username = etUsername.text.toString()
-            val password = etPassword.text.toString()
+        val btnIngresar = findViewById<MaterialButton>(R.id.btnIngresar)
+        val btnRegistrar = findViewById<MaterialButton>(R.id.btnRegistrar)
 
-            if (username.isBlank() || password.isBlank()) {
-                tvError.text = "Por favor ingrese usuario y contraseña"
+        btnIngresar.setOnClickListener {
+            val email = txtCorreo.text.toString().trim()
+            val password = txtPass.text.toString().trim()
+
+            if (email.isBlank() || password.isBlank()) {
+                tvError.text = "Por favor ingrese correo y contraseña"
                 tvError.visibility = View.VISIBLE
                 return@setOnClickListener
             }
 
-            val success = AuthRepository.login(username, password)
-            if (success) {
-                tvError.visibility = View.GONE
-
-                val currentUser = AuthRepository.currentUser
-                val bundle = Bundle().apply {
-                    putString("username", currentUser?.username ?: username)
-                    putString("user_fullname", currentUser?.fullName ?: "")
-                    putString("user_role", currentUser?.role ?: "Guardaparque")
-                    putString(FirebaseAnalytics.Param.METHOD, "local_auth")
-                }
-                firebaseAnalytics.logEvent(FirebaseAnalytics.Event.LOGIN, bundle)
-
-                Toast.makeText(this, "¡Bienvenido, ${currentUser?.fullName}!", Toast.LENGTH_SHORT).show()
-                navigateToMain()
-            } else {
-                tvError.text = "Credenciales incorrectas. Intente con admin / admin123"
-                tvError.visibility = View.VISIBLE
-            }
+            ingresar(email, password)
         }
 
-        btnQuickDemo.setOnClickListener {
-            etUsername.setText("admin")
-            etPassword.setText("admin123")
-            btnLogin.performClick()
+        btnRegistrar.setOnClickListener {
+            val intent = Intent(this, RegistroActivity::class.java)
+            startActivity(intent)
+        }
+    }
+
+    private fun ingresar(email: String, password: String) {
+        tvError.visibility = View.GONE
+
+        mAuth.signInWithEmailAndPassword(email, password)
+            .addOnCompleteListener(this) { task ->
+                if (task.isSuccessful) {
+                    Log.d(TAG, "signInWithEmail:success")
+                    val user = mAuth.currentUser
+
+                    AuthRepository.fetchUserData { userData ->
+                        val bundle = Bundle().apply {
+                            putString("username", userData?.email ?: email)
+                            putString("user_fullname", userData?.fullName ?: "")
+                            putString("user_role", userData?.role ?: "Guardaparque")
+                            putString(FirebaseAnalytics.Param.METHOD, "firebase_email")
+                        }
+                        firebaseAnalytics.logEvent(FirebaseAnalytics.Event.LOGIN, bundle)
+
+                        Toast.makeText(this, "¡Bienvenido, ${userData?.fullName ?: user?.email}!", Toast.LENGTH_SHORT).show()
+                        updateUI(user)
+                    }
+                } else {
+                    Log.w(TAG, "signInWithEmail:failure", task.exception)
+                    tvError.text = "Credenciales incorrectas"
+                    tvError.visibility = View.VISIBLE
+                    Toast.makeText(this, "Credenciales incorrectas", Toast.LENGTH_SHORT).show()
+                    updateUI(null)
+                }
+            }
+    }
+
+    private fun updateUI(user: FirebaseUser?) {
+        if (user != null) {
+            navigateToMain()
         }
     }
 
     private fun navigateToMain() {
         val intent = Intent(this, MainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
     }

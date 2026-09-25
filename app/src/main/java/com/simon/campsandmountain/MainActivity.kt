@@ -50,7 +50,7 @@ class MainActivity : AppCompatActivity() {
 
         val screenBundle = Bundle().apply {
             putString(FirebaseAnalytics.Param.SCREEN_NAME, "MainActivity")
-            putString("usuario_activo", currentUser?.username ?: "Guardaparque")
+            putString("usuario_activo", currentUser?.email ?: "Guardaparque")
         }
         firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, screenBundle)
 
