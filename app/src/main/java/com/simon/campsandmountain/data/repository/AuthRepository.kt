@@ -25,17 +25,16 @@ object AuthRepository {
             return
         }
 
-        db.collection("users").document(fbUser.uid).get()
+        db.collection("Usuarios").document(fbUser.uid).get()
             .addOnSuccessListener { document ->
                 if (document != null && document.exists()) {
-                    val fullName = document.getString("fullName") ?: fbUser.displayName ?: "Usuario"
-                    val email = document.getString("email") ?: fbUser.email ?: ""
-                    val role = document.getString("role") ?: "Guardaparque"
+                    val nombre = document.getString("nombre") ?: fbUser.displayName ?: "Usuario"
+                    val correo = document.getString("correo") ?: fbUser.email ?: ""
                     val user = User(
                         uid = fbUser.uid,
-                        fullName = fullName,
-                        email = email,
-                        role = role
+                        fullName = nombre,
+                        email = correo,
+                        role = "Guardaparque"
                     )
                     currentUser = user
                     onComplete(user)
@@ -62,20 +61,18 @@ object AuthRepository {
             }
     }
 
-    fun saveUserDataToFirestore(uid: String, fullName: String, email: String, onComplete: (Boolean) -> Unit) {
+    fun saveUserDataToFirestore(uid: String, nombre: String, correo: String, onComplete: (Boolean, String?) -> Unit) {
         val userMap = hashMapOf(
-            "fullName" to fullName,
-            "email" to email,
-            "role" to "Guardaparque",
-            "createdAt" to com.google.firebase.Timestamp.now()
+            "nombre" to nombre,
+            "correo" to correo
         )
-        db.collection("users").document(uid).set(userMap)
+        db.collection("Usuarios").document(uid).set(userMap)
             .addOnSuccessListener {
-                currentUser = User(uid = uid, fullName = fullName, email = email, role = "Guardaparque")
-                onComplete(true)
+                currentUser = User(uid = uid, fullName = nombre, email = correo, role = "Guardaparque")
+                onComplete(true, null)
             }
-            .addOnFailureListener {
-                onComplete(false)
+            .addOnFailureListener { e ->
+                onComplete(false, e.localizedMessage)
             }
     }
 }

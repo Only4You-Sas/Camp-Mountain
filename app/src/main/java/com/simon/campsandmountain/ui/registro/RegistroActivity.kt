@@ -83,14 +83,9 @@ class RegistroActivity : AppCompatActivity() {
                     Log.d(TAG, "createUserWithEmail:success")
                     val user = oFirebaseAuth.currentUser
                     if (user != null) {
-                        AuthRepository.saveUserDataToFirestore(user.uid, nombre, correo) { success ->
-                            if (success) {
-                                Toast.makeText(this, "usuario ha sido creado", Toast.LENGTH_SHORT).show()
-                                updateUI(user)
-                            } else {
-                                Toast.makeText(this, "usuario ha sido creado", Toast.LENGTH_SHORT).show()
-                                updateUI(user)
-                            }
+                        AuthRepository.saveUserDataToFirestore(user.uid, nombre, correo) { success, _ ->
+                            Toast.makeText(this, "usuario ha sido creado", Toast.LENGTH_SHORT).show()
+                            updateUI(user)
                         }
                     } else {
                         Toast.makeText(this, "usuario ha sido creado", Toast.LENGTH_SHORT).show()
@@ -98,7 +93,10 @@ class RegistroActivity : AppCompatActivity() {
                     }
                 } else {
                     Log.w(TAG, "createUserWithEmail:failure", task.exception)
-                    Toast.makeText(this, "Fallo la autenticación", Toast.LENGTH_SHORT).show()
+                    val errorDetail = task.exception?.localizedMessage ?: "Fallo la autenticación"
+                    tvErrorRegistro.text = errorDetail
+                    tvErrorRegistro.visibility = View.VISIBLE
+                    Toast.makeText(this, errorDetail, Toast.LENGTH_LONG).show()
                     updateUI(null)
                 }
             }
