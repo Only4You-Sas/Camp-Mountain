@@ -31,7 +31,6 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Inicialización de Firebase Analytics
         firebaseAnalytics = FirebaseAnalytics.getInstance(this)
 
         enableEdgeToEdge()
@@ -49,7 +48,6 @@ class MainActivity : AppCompatActivity() {
         val currentUser = AuthRepository.currentUser
         topAppBar.subtitle = "Usuario: ${currentUser?.fullName ?: "Guardaparque"}"
 
-        // Registrar evento de apertura en Firebase Analytics
         val screenBundle = Bundle().apply {
             putString(FirebaseAnalytics.Param.SCREEN_NAME, "MainActivity")
             putString("usuario_activo", currentUser?.username ?: "Guardaparque")

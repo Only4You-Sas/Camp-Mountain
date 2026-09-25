@@ -181,7 +181,6 @@ class RefugiosFragment : Fragment() {
                     telefonoContacto = telefono
                 )
 
-                // Evento Firebase Analytics
                 val analyticsBundle = Bundle().apply {
                     putString("item_name", nombre)
                     putInt("altitud", altitud)

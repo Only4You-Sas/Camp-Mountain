@@ -49,7 +49,6 @@ class LoginActivity : AppCompatActivity() {
             if (success) {
                 tvError.visibility = View.GONE
 
-                // Registrar evento de Login en Firebase Analytics con identificación de usuario
                 val currentUser = AuthRepository.currentUser
                 val bundle = Bundle().apply {
                     putString("username", currentUser?.username ?: username)

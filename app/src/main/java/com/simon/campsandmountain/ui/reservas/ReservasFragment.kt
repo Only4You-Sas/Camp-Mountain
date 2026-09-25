@@ -122,7 +122,7 @@ class ReservasFragment : Fragment() {
         etEntrada.setOnClickListener { showDatePicker(etEntrada) }
         etSalida.setOnClickListener { showDatePicker(etSalida) }
 
-        val lugaresList = mutableListOf<Pair<String, String>>() // Pair(ID, Nombre)
+        val lugaresList = mutableListOf<Pair<String, String>>()
         var selectedLugarIndex = 0
 
         fun updateSpinnerOptions(isRefugio: Boolean) {
@@ -223,7 +223,6 @@ class ReservasFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            // Validar coherencia de fechas (la salida NO puede ser anterior a la entrada)
             val dateEntrada = try { dateFormat.parse(entrada) } catch (e: Exception) { null }
             val dateSalida = try { dateFormat.parse(salida) } catch (e: Exception) { null }
 
@@ -275,7 +274,6 @@ class ReservasFragment : Fragment() {
                     estado = estadoReserva
                 )
 
-                // Evento Firebase Analytics para creación de reserva
                 val analyticsBundle = Bundle().apply {
                     putString("nombre_visitante", nombre)
                     putString("tipo_alojamiento", tipoAlojamiento.label)
