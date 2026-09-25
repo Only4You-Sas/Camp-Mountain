@@ -53,11 +53,6 @@ class RegistroActivity : AppCompatActivity() {
         btnVolverLogin.setOnClickListener { finish() }
     }
 
-    override fun onStart() {
-        super.onStart()
-        oFirebaseAuth.currentUser?.let { user -> reload(user) }
-    }
-
     private fun crearRegistro() {
         val nombre = txtNombreR.text.toString().trim()
         val correo = txtCorreoR.text.toString().trim()
@@ -83,9 +78,15 @@ class RegistroActivity : AppCompatActivity() {
                     Log.d(TAG, "createUserWithEmail:success")
                     val user = oFirebaseAuth.currentUser
                     if (user != null) {
-                        AuthRepository.saveUserDataToFirestore(user.uid, nombre, correo) { success, _ ->
-                            Toast.makeText(this, "usuario ha sido creado", Toast.LENGTH_SHORT).show()
-                            updateUI(user)
+                        AuthRepository.saveUserDataToFirestore(user.uid, nombre, correo) { success, firestoreError ->
+                            if (success) {
+                                Toast.makeText(this, "usuario ha sido creado", Toast.LENGTH_SHORT).show()
+                                updateUI(user)
+                            } else {
+                                Log.e(TAG, "Error Firestore: $firestoreError")
+                                Toast.makeText(this, "Usuario creado en Auth. Error Firestore: $firestoreError", Toast.LENGTH_LONG).show()
+                                updateUI(user)
+                            }
                         }
                     } else {
                         Toast.makeText(this, "usuario ha sido creado", Toast.LENGTH_SHORT).show()
@@ -97,7 +98,6 @@ class RegistroActivity : AppCompatActivity() {
                     tvErrorRegistro.text = errorDetail
                     tvErrorRegistro.visibility = View.VISIBLE
                     Toast.makeText(this, errorDetail, Toast.LENGTH_LONG).show()
-                    updateUI(null)
                 }
             }
     }
@@ -109,9 +109,5 @@ class RegistroActivity : AppCompatActivity() {
             startActivity(intent)
             finish()
         }
-    }
-
-    private fun reload(user: FirebaseUser) {
-        updateUI(user)
     }
 }
