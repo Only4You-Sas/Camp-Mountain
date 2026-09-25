@@ -11,10 +11,9 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
-import com.simon.campsandmountain.MainActivity
 import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.repository.AuthRepository
+import com.simon.campsandmountain.ui.login.LoginActivity
 
 class RegistroActivity : AppCompatActivity() {
 
@@ -78,19 +77,11 @@ class RegistroActivity : AppCompatActivity() {
                     Log.d(TAG, "createUserWithEmail:success")
                     val user = oFirebaseAuth.currentUser
                     if (user != null) {
-                        AuthRepository.saveUserDataToFirestore(user.uid, nombre, correo) { success, firestoreError ->
-                            if (success) {
-                                Toast.makeText(this, "usuario ha sido creado", Toast.LENGTH_SHORT).show()
-                                updateUI(user)
-                            } else {
-                                Log.e(TAG, "Error Firestore: $firestoreError")
-                                Toast.makeText(this, "Usuario creado en Auth. Error Firestore: $firestoreError", Toast.LENGTH_LONG).show()
-                                updateUI(user)
-                            }
+                        AuthRepository.saveUserDataToFirestore(user.uid, nombre, correo) { _, _ ->
+                            finalizarRegistroNologeado(correo)
                         }
                     } else {
-                        Toast.makeText(this, "usuario ha sido creado", Toast.LENGTH_SHORT).show()
-                        updateUI(null)
+                        finalizarRegistroNologeado(correo)
                     }
                 } else {
                     Log.w(TAG, "createUserWithEmail:failure", task.exception)
@@ -102,12 +93,15 @@ class RegistroActivity : AppCompatActivity() {
             }
     }
 
-    private fun updateUI(user: FirebaseUser?) {
-        if (user != null) {
-            val intent = Intent(this, MainActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            finish()
-        }
+    private fun finalizarRegistroNologeado(correo: String) {
+        oFirebaseAuth.signOut()
+        AuthRepository.logout()
+        Toast.makeText(this, "usuario ha sido creado. Por favor inicie sesión", Toast.LENGTH_LONG).show()
+
+        val intent = Intent(this, LoginActivity::class.java)
+        intent.putExtra("PREFILLED_EMAIL", correo)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
 }

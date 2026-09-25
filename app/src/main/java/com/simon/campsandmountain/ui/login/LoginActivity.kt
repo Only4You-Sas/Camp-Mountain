@@ -50,6 +50,11 @@ class LoginActivity : AppCompatActivity() {
         txtPass = findViewById(R.id.txtPass)
         tvError = findViewById(R.id.tvError)
 
+        val prefilledEmail = intent.getStringExtra("PREFILLED_EMAIL")
+        if (!prefilledEmail.isNullOrBlank()) {
+            txtCorreo.setText(prefilledEmail)
+        }
+
         val btnIngresar = findViewById<MaterialButton>(R.id.btnIngresar)
         val btnRegistrar = findViewById<MaterialButton>(R.id.btnRegistrar)
 
