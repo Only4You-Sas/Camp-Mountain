@@ -1,0 +1,60 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:scaleX="0.75"
+        android:scaleY="0.75"
+        android:translateX="13.5"
+        android:translateY="13.5">
+
+        <!-- Outer Black Ring Circle -->
+        <path
+            android:fillColor="#000000"
+            android:pathData="M54,4 A50,50 0 1,1 53.9,4 Z" />
+
+        <!-- Inner Teal Circle Background -->
+        <path
+            android:fillColor="#1A8B88"
+            android:pathData="M54,8 A46,46 0 1,1 53.9,8 Z" />
+
+        <!-- Left Mountain Base -->
+        <path
+            android:fillColor="#000000"
+            android:pathData="M20,79 L45,35 L62,79 Z" />
+        <path
+            android:fillColor="#9A714E"
+            android:pathData="M23,77 L45,38 L59,77 Z" />
+        <!-- Left Mountain Shadow -->
+        <path
+            android:fillColor="#634830"
+            android:pathData="M45,38 L59,77 L45,77 Z" />
+        <!-- Left Mountain Snow Cap -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M45,38 L37,51 L45,52 L49,47 Z" />
+
+        <!-- Right Mountain Base -->
+        <path
+            android:fillColor="#000000"
+            android:pathData="M37,96 L79,17 L100,91 Z" />
+        <path
+            android:fillColor="#9A714E"
+            android:pathData="M40,94 L79,20 L97,89 Z" />
+        <!-- Right Mountain Shadow -->
+        <path
+            android:fillColor="#634830"
+            android:pathData="M79,20 L97,89 L69,92 Z" />
+        <!-- Right Mountain Snow Cap -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M79,20 L69,38 L79,41 L84,35 Z" />
+
+        <!-- Outer Black Border Mask -->
+        <path
+            android:fillColor="#000000"
+            android:pathData="M54,4 C26.4,4 4,26.4 4,54 C4,81.6 26.4,104 54,104 C81.6,104 104,81.6 104,54 C104,26.4 81.6,4 54,4 Z M54,98 C29.7,98 10,78.3 10,54 C10,29.7 29.7,10 54,10 C78.3,10 98,29.7 98,54 C98,78.3 78.3,98 54,98 Z" />
+    </group>
+</vector>

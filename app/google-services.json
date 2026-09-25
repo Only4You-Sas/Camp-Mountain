@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "664172345703",
+    "project_id": "campandmountain-86f56",
+    "storage_bucket": "campandmountain-86f56.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:664172345703:android:fb8271b08a02c7ee8817c2",
+        "android_client_info": {
+          "package_name": "com.simon.campsandmountain"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB32cBGTBBe6616Nm9I8nQgzW7ycclYmZA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

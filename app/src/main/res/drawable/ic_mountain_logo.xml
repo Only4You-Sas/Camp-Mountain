@@ -1,0 +1,53 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- Outer Black Border Ring -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M50,0 A50,50 0 1,1 49.9,0 Z" />
+
+    <!-- Inner Teal Sky Circle Background -->
+    <path
+        android:fillColor="#1A8B88"
+        android:pathData="M50,5 A45,45 0 1,1 49.9,5 Z" />
+
+    <!-- Left Mountain Base -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M16,75 L41,35 L58,75 Z" />
+    <path
+        android:fillColor="#9A714E"
+        android:pathData="M19,73 L41,38 L55,73 Z" />
+    <!-- Left Mountain Shadow -->
+    <path
+        android:fillColor="#634830"
+        android:pathData="M41,38 L55,73 L41,73 Z" />
+    <!-- Left Mountain Snow Cap -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M41,38 L33,51 L41,52 L45,47 Z" />
+
+    <!-- Right Mountain Base -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M33,92 L75,13 L96,87 Z" />
+    <path
+        android:fillColor="#9A714E"
+        android:pathData="M36,90 L75,16 L93,85 Z" />
+    <!-- Right Mountain Shadow -->
+    <path
+        android:fillColor="#634830"
+        android:pathData="M75,16 L93,85 L65,88 Z" />
+    <!-- Right Mountain Snow Cap -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M75,16 L65,34 L75,37 L80,31 Z" />
+
+    <!-- Outer Circular Ring Frame Mask -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M50,0 C22.4,0 0,22.4 0,50 C0,77.6 22.4,100 50,100 C77.6,100 100,77.6 100,50 C100,22.4 77.6,0 50,0 Z M50,94 C25.7,94 6,74.3 6,50 C6,25.7 25.7,6 50,6 C74.3,6 94,25.7 94,50 C94,74.3 74.3,94 50,94 Z" />
+</vector>

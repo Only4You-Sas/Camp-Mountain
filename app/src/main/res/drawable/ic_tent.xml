@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Main Tent Shape -->
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M12,3L22,19H2L12,3Z" />
+    <!-- Inner Entrance / Opening -->
+    <path
+        android:fillColor="#37474F"
+        android:pathData="M12,8L18,19H6L12,8Z" />
+    <!-- Yellow flap -->
+    <path
+        android:fillColor="#F57F17"
+        android:pathData="M12,11L15,19H12V11Z" />
+</vector>

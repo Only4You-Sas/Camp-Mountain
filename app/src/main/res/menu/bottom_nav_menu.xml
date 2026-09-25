@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_refugios"
+        android:icon="@drawable/ic_mountain_shelter"
+        android:title="Refugios" />
+    <item
+        android:id="@+id/nav_campamentos"
+        android:icon="@drawable/ic_tent"
+        android:title="Campamentos" />
+    <item
+        android:id="@+id/nav_reservas"
+        android:icon="@drawable/ic_booking"
+        android:title="Reservas" />
+</menu>
