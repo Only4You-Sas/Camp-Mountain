@@ -13,6 +13,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.simon.campsandmountain.data.repository.AuthRepository
 import com.simon.campsandmountain.ui.campamentos.CampamentosFragment
+import com.simon.campsandmountain.ui.crud.FirestoreCrudActivity
 import com.simon.campsandmountain.ui.login.LoginActivity
 import com.simon.campsandmountain.ui.refugios.RefugiosFragment
 import com.simon.campsandmountain.ui.reservas.ReservasFragment
@@ -56,6 +57,11 @@ class MainActivity : AppCompatActivity() {
 
         topAppBar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
+                R.id.action_firestore_crud -> {
+                    val intent = Intent(this, FirestoreCrudActivity::class.java)
+                    startActivity(intent)
+                    true
+                }
                 R.id.action_logout -> {
                     AuthRepository.logout()
                     Toast.makeText(this, "Sesión cerrada correctamente", Toast.LENGTH_SHORT).show()
