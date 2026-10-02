@@ -17,6 +17,7 @@ import com.simon.campsandmountain.ui.crud.FirestoreCrudActivity
 import com.simon.campsandmountain.ui.login.LoginActivity
 import com.simon.campsandmountain.ui.refugios.RefugiosFragment
 import com.simon.campsandmountain.ui.reservas.ReservasFragment
+import com.simon.campsandmountain.ui.usuarios.UsuariosFragment
 
 class MainActivity : AppCompatActivity() {
 
@@ -90,6 +91,12 @@ class MainActivity : AppCompatActivity() {
                     topAppBar.title = "Gestión de Reservas"
                     loadFragment(ReservasFragment())
                     firebaseAnalytics.logEvent("ver_reservas", null)
+                    true
+                }
+                R.id.nav_usuarios -> {
+                    topAppBar.title = "Usuarios Firestore"
+                    loadFragment(UsuariosFragment())
+                    firebaseAnalytics.logEvent("ver_usuarios", null)
                     true
                 }
                 else -> false
