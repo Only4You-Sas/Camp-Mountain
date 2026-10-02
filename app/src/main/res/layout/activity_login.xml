@@ -150,6 +150,15 @@
                     app:iconPadding="10dp"
                     app:iconTint="@null" />
 
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCrudFirestore"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="🔥 Probar CRUD Firestore (PPT)"
+                    android:textColor="@color/accent_gold" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
