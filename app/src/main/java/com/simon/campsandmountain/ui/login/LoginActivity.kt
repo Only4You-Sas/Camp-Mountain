@@ -16,7 +16,6 @@ import com.google.firebase.auth.OAuthProvider
 import com.simon.campsandmountain.MainActivity
 import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.repository.AuthRepository
-import com.simon.campsandmountain.ui.crud.FirestoreCrudActivity
 import com.simon.campsandmountain.ui.registro.RegistroActivity
 import java.util.Locale
 
@@ -62,7 +61,6 @@ class LoginActivity : AppCompatActivity() {
         val btnRegistrar = findViewById<MaterialButton>(R.id.btnRegistrar)
         val btnGoogleLogin = findViewById<MaterialButton>(R.id.btnGoogleLogin)
         val btnMicrosoftLogin = findViewById<MaterialButton>(R.id.btnMicrosoftLogin)
-        val btnCrudFirestore = findViewById<MaterialButton>(R.id.btnCrudFirestore)
 
         btnIngresar.setOnClickListener {
             val email = txtCorreo.text.toString().trim()
@@ -88,11 +86,6 @@ class LoginActivity : AppCompatActivity() {
 
         btnMicrosoftLogin.setOnClickListener {
             iniciarSesionConProveedor("microsoft.com")
-        }
-
-        btnCrudFirestore?.setOnClickListener {
-            val intent = Intent(this, FirestoreCrudActivity::class.java)
-            startActivity(intent)
         }
     }
 
