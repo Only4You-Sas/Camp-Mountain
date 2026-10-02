@@ -17,6 +17,7 @@ import com.simon.campsandmountain.MainActivity
 import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.repository.AuthRepository
 import com.simon.campsandmountain.ui.registro.RegistroActivity
+import java.util.Locale
 
 class LoginActivity : AppCompatActivity() {
 
@@ -129,18 +130,26 @@ class LoginActivity : AppCompatActivity() {
             .addOnSuccessListener { authResult ->
                 val user = authResult.user
                 if (user != null) {
-                    val nombre = user.displayName ?: "Usuario $providerId"
+                    val profileMap = authResult.additionalUserInfo?.profile
+                    val profileName = profileMap?.get("name") as? String
+                        ?: profileMap?.get("given_name") as? String
+                        ?: user.displayName
+                        ?: user.email?.substringBefore("@")
+                            ?.split(".")
+                            ?.joinToString(" ") { word -> word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
+                        ?: "Usuario"
+
                     val correo = user.email ?: ""
 
-                    AuthRepository.saveUserDataToFirestore(user.uid, nombre, correo) { _, _ ->
+                    AuthRepository.saveUserDataToFirestore(user.uid, profileName, correo) { _, _ ->
                         val bundle = Bundle().apply {
                             putString("username", correo)
-                            putString("user_fullname", nombre)
+                            putString("user_fullname", profileName)
                             putString(FirebaseAnalytics.Param.METHOD, providerId)
                         }
                         firebaseAnalytics.logEvent(FirebaseAnalytics.Event.LOGIN, bundle)
 
-                        Toast.makeText(this, "¡Bienvenido, $nombre!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "¡Bienvenido, $profileName!", Toast.LENGTH_SHORT).show()
                         updateUI(user)
                     }
                 }

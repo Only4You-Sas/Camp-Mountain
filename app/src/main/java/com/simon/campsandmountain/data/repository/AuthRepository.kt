@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.simon.campsandmountain.data.model.User
+import java.util.Locale
 
 object AuthRepository {
     private val auth: FirebaseAuth get() = FirebaseAuth.getInstance()
@@ -37,7 +38,15 @@ object AuthRepository {
         db.collection("Usuarios").document(fbUser.uid).get()
             .addOnSuccessListener { document ->
                 if (document != null && document.exists()) {
-                    val nombre = document.getString("nombre") ?: fbUser.displayName ?: "Usuario"
+                    val rawNombre = document.getString("nombre")
+                    val nombre = if (rawNombre.isNullOrBlank() || rawNombre.startsWith("Usuario google") || rawNombre.startsWith("Usuario microsoft")) {
+                        fbUser.displayName ?: fbUser.email?.substringBefore("@")
+                            ?.split(".")
+                            ?.joinToString(" ") { word -> word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
+                            ?: "Usuario"
+                    } else {
+                        rawNombre
+                    }
                     val correo = document.getString("correo") ?: fbUser.email ?: ""
                     val user = User(
                         uid = fbUser.uid,
@@ -48,9 +57,14 @@ object AuthRepository {
                     currentUser = user
                     onComplete(user)
                 } else {
+                    val fallbackName = fbUser.displayName
+                        ?: fbUser.email?.substringBefore("@")
+                            ?.split(".")
+                            ?.joinToString(" ") { word -> word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
+                        ?: "Usuario"
                     val fallbackUser = User(
                         uid = fbUser.uid,
-                        fullName = fbUser.displayName ?: fbUser.email?.substringBefore("@") ?: "Usuario",
+                        fullName = fallbackName,
                         email = fbUser.email ?: "",
                         role = "Guardaparque"
                     )
@@ -59,9 +73,13 @@ object AuthRepository {
                 }
             }
             .addOnFailureListener {
+                val fallbackName = fbUser.email?.substringBefore("@")
+                    ?.split(".")
+                    ?.joinToString(" ") { word -> word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
+                    ?: "Usuario"
                 val fallbackUser = User(
                     uid = fbUser.uid,
-                    fullName = fbUser.email?.substringBefore("@") ?: "Usuario",
+                    fullName = fallbackName,
                     email = fbUser.email ?: "",
                     role = "Guardaparque"
                 )
