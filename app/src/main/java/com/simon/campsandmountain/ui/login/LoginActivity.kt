@@ -12,6 +12,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.OAuthProvider
 import com.simon.campsandmountain.MainActivity
 import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.repository.AuthRepository
@@ -57,6 +58,8 @@ class LoginActivity : AppCompatActivity() {
 
         val btnIngresar = findViewById<MaterialButton>(R.id.btnIngresar)
         val btnRegistrar = findViewById<MaterialButton>(R.id.btnRegistrar)
+        val btnGoogleLogin = findViewById<MaterialButton>(R.id.btnGoogleLogin)
+        val btnMicrosoftLogin = findViewById<MaterialButton>(R.id.btnMicrosoftLogin)
 
         btnIngresar.setOnClickListener {
             val email = txtCorreo.text.toString().trim()
@@ -74,6 +77,14 @@ class LoginActivity : AppCompatActivity() {
         btnRegistrar.setOnClickListener {
             val intent = Intent(this, RegistroActivity::class.java)
             startActivity(intent)
+        }
+
+        btnGoogleLogin.setOnClickListener {
+            iniciarSesionConProveedor("google.com")
+        }
+
+        btnMicrosoftLogin.setOnClickListener {
+            iniciarSesionConProveedor("microsoft.com")
         }
     }
 
@@ -105,6 +116,41 @@ class LoginActivity : AppCompatActivity() {
                     Toast.makeText(this, "Credenciales incorrectas", Toast.LENGTH_SHORT).show()
                     updateUI(null)
                 }
+            }
+    }
+
+    private fun iniciarSesionConProveedor(providerId: String) {
+        tvError.visibility = View.GONE
+
+        val provider = OAuthProvider.newBuilder(providerId)
+        provider.addCustomParameter("prompt", "select_account")
+
+        mAuth.startActivityForSignInWithProvider(this, provider.build())
+            .addOnSuccessListener { authResult ->
+                val user = authResult.user
+                if (user != null) {
+                    val nombre = user.displayName ?: "Usuario $providerId"
+                    val correo = user.email ?: ""
+
+                    AuthRepository.saveUserDataToFirestore(user.uid, nombre, correo) { _, _ ->
+                        val bundle = Bundle().apply {
+                            putString("username", correo)
+                            putString("user_fullname", nombre)
+                            putString(FirebaseAnalytics.Param.METHOD, providerId)
+                        }
+                        firebaseAnalytics.logEvent(FirebaseAnalytics.Event.LOGIN, bundle)
+
+                        Toast.makeText(this, "¡Bienvenido, $nombre!", Toast.LENGTH_SHORT).show()
+                        updateUI(user)
+                    }
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.w(TAG, "signInWithProvider:failure", e)
+                val errorMsg = e.localizedMessage ?: "Error al iniciar sesión con proveedor"
+                tvError.text = errorMsg
+                tvError.visibility = View.VISIBLE
+                Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show()
             }
     }
 
