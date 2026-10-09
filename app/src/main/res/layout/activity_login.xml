@@ -43,6 +43,18 @@
                 android:orientation="vertical"
                 android:padding="24dp">
 
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnTestCrash"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginBottom="16dp"
+                    android:text="💥 Test Crash (Crashlytics)"
+                    android:textColor="@color/white"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="@color/status_closed"
+                    app:cornerRadius="12dp" />
+
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

@@ -2,8 +2,6 @@ package com.simon.campsandmountain
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.ViewGroup
-import android.widget.Button
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -56,19 +54,6 @@ class MainActivity : AppCompatActivity() {
             putString("usuario_activo", currentUser?.email ?: "Guardaparque")
         }
         firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, screenBundle)
-
-        // Botón de prueba para Crashlytics (Slide 4)
-        val crashButton = Button(this)
-        crashButton.text = "Test Crash"
-        crashButton.setOnClickListener {
-            throw RuntimeException("Test Crash") // Force a crash
-        }
-        addContentView(
-            crashButton, ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        )
 
         topAppBar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {

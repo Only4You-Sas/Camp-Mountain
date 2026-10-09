@@ -57,10 +57,15 @@ class LoginActivity : AppCompatActivity() {
             txtCorreo.setText(prefilledEmail)
         }
 
+        val btnTestCrash = findViewById<MaterialButton>(R.id.btnTestCrash)
         val btnIngresar = findViewById<MaterialButton>(R.id.btnIngresar)
         val btnRegistrar = findViewById<MaterialButton>(R.id.btnRegistrar)
         val btnGoogleLogin = findViewById<MaterialButton>(R.id.btnGoogleLogin)
         val btnMicrosoftLogin = findViewById<MaterialButton>(R.id.btnMicrosoftLogin)
+
+        btnTestCrash.setOnClickListener {
+            throw RuntimeException("Test Crash") // Force a crash for Firebase Crashlytics
+        }
 
         btnIngresar.setOnClickListener {
             val email = txtCorreo.text.toString().trim()
