@@ -1,16 +1,23 @@
 package com.simon.campsandmountain
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.messaging.FirebaseMessaging
 import com.simon.campsandmountain.data.repository.AuthRepository
 import com.simon.campsandmountain.ui.campamentos.CampamentosFragment
 import com.simon.campsandmountain.ui.login.LoginActivity
@@ -23,6 +30,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var topAppBar: MaterialToolbar
     private lateinit var bottomNav: BottomNavigationView
     private lateinit var firebaseAnalytics: FirebaseAnalytics
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            Log.d("FCM", "POST_NOTIFICATIONS permission granted")
+        } else {
+            Log.w("FCM", "POST_NOTIFICATIONS permission denied")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +71,17 @@ class MainActivity : AppCompatActivity() {
             putString("usuario_activo", currentUser?.email ?: "Guardaparque")
         }
         firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, screenBundle)
+
+        // Solicitar permiso de notificaciones para Android 13+ (Slide 4)
+        askNotificationPermission()
+
+        // Obtener el token de FCM para probar notificaciones Push desde Firebase Console
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val token = task.result
+                Log.d("FCMToken", "FCM Registration Token: $token")
+            }
+        }
 
         topAppBar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
@@ -99,6 +127,20 @@ class MainActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             bottomNav.selectedItemId = R.id.nav_refugios
+        }
+    }
+
+    private fun askNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                Log.d("FCM", "Permission already granted")
+            } else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
     }
 
