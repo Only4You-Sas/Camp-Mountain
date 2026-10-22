@@ -52,14 +52,24 @@ class ReservaAdapter(
         val color = ContextCompat.getColor(holder.itemView.context, colorRes)
         holder.tvEstado.setTextColor(color)
 
-        holder.btnEditar.setOnClickListener { onEditClick(item) }
+        val isStaff = AuthRepository.canManageRefugiosAndCampamentos()
+        val currentUid = AuthRepository.currentUser?.uid ?: ""
+        val currentEmail = AuthRepository.currentUser?.email?.trim()?.lowercase() ?: ""
+        val itemEmail = item.userEmail.trim().lowercase()
 
-        // Solo Administrador y Guardaparque pueden eliminar reservas
-        val canDelete = AuthRepository.canManageRefugiosAndCampamentos()
-        if (canDelete) {
+        val isOwner = (currentUid.isNotEmpty() && item.userId == currentUid) ||
+                (currentEmail.isNotEmpty() && itemEmail == currentEmail)
+
+        // Administrador / Guardaparque pueden editar y eliminar todas las reservas
+        // Un usuario Visitante solo puede editar o eliminar SUS PROPIAS reservas
+        if (isStaff || isOwner) {
+            holder.btnEditar.visibility = View.VISIBLE
+            holder.btnEditar.setOnClickListener { onEditClick(item) }
+
             holder.btnEliminar.visibility = View.VISIBLE
             holder.btnEliminar.setOnClickListener { onDeleteClick(item) }
         } else {
+            holder.btnEditar.visibility = View.GONE
             holder.btnEliminar.visibility = View.GONE
         }
     }

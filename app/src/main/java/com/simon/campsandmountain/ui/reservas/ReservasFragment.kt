@@ -20,10 +20,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.model.EstadoReserva
 import com.simon.campsandmountain.data.model.Reserva
 import com.simon.campsandmountain.data.model.TipoAlojamiento
+import com.simon.campsandmountain.data.repository.AuthRepository
 import com.simon.campsandmountain.data.repository.CampamentoRepository
 import com.simon.campsandmountain.data.repository.RefugioRepository
 import com.simon.campsandmountain.data.repository.ReservaRepository
@@ -36,6 +38,7 @@ class ReservasFragment : Fragment() {
     private lateinit var adapter: ReservaAdapter
     private lateinit var tvEmpty: TextView
     private lateinit var etSearch: EditText
+    private var firebaseAnalytics: FirebaseAnalytics? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -48,13 +51,17 @@ class ReservasFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        context?.let {
+            firebaseAnalytics = FirebaseAnalytics.getInstance(it)
+        }
+
         tvEmpty = view.findViewById(R.id.tvEmptyReservas)
         etSearch = view.findViewById(R.id.etSearchReserva)
         val rv: RecyclerView = view.findViewById(R.id.rvReservas)
         val fab: FloatingActionButton = view.findViewById(R.id.fabAddReserva)
 
         adapter = ReservaAdapter(
-            list = ReservaRepository.getAll(),
+            list = emptyList(),
             onEditClick = { reserva -> showReservaFormDialog(reserva) },
             onDeleteClick = { reserva -> showDeleteConfirmation(reserva) }
         )
@@ -70,18 +77,15 @@ class ReservasFragment : Fragment() {
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        refreshData()
+        ReservaRepository.listen(firebaseAnalytics) { _ ->
+            filterList(etSearch.text.toString())
+        }
     }
 
     private fun filterList(query: String) {
         val filtered = ReservaRepository.search(query)
         adapter.updateData(filtered)
         tvEmpty.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
-    }
-
-    fun refreshData() {
-        val currentQuery = etSearch.text.toString()
-        filterList(currentQuery)
     }
 
     private fun showReservaFormDialog(reservaToEdit: Reserva?) {
@@ -119,7 +123,6 @@ class ReservasFragment : Fragment() {
                 targetEditText.setText(dateFormat.format(selectedCal.time))
             }, y, m, d)
 
-            // Restringir el calendario para no permitir seleccionar fechas anteriores al día de hoy
             val todayStart = Calendar.getInstance(esLocale).apply {
                 set(Calendar.HOUR_OF_DAY, 0)
                 set(Calendar.MINUTE, 0)
@@ -199,6 +202,11 @@ class ReservasFragment : Fragment() {
             }
         } else {
             tvTitle.text = "Nueva Reserva"
+            val currentUser = AuthRepository.currentUser
+            if (currentUser != null) {
+                etNombre.setText(currentUser.fullName)
+                etContacto.setText(currentUser.email)
+            }
         }
 
         val alertDialog = AlertDialog.Builder(context)
@@ -279,7 +287,7 @@ class ReservasFragment : Fragment() {
             val actionName = if (reservaToEdit != null) "actualizar" else "crear"
             AlertDialog.Builder(context)
                 .setTitle("Confirmar Guardado de Reserva")
-                .setMessage("¿Deseas $actionName la reserva a nombre de '$nombre' en '${selectedLugarPair.second}'?")
+                .setMessage("¿Deseas $actionName la reserva a nombre de '$nombre' en '${selectedLugarPair.second}' en Cloud Firestore?")
                 .setPositiveButton("Guardar") { _, _ ->
                     if (reservaToEdit != null) {
                         val updated = reservaToEdit.copy(
@@ -293,10 +301,20 @@ class ReservasFragment : Fragment() {
                             cantidadPersonas = personas,
                             estado = estadoReserva
                         )
-                        ReservaRepository.update(updated)
-                        Toast.makeText(context, "Reserva actualizada exitosamente", Toast.LENGTH_SHORT).show()
+                        ReservaRepository.update(updated, firebaseAnalytics) { success, error ->
+                            if (success) {
+                                Toast.makeText(context, "Reserva actualizada exitosamente en Cloud Firestore", Toast.LENGTH_SHORT).show()
+                                alertDialog.dismiss()
+                            } else {
+                                FirebaseCrashlytics.getInstance().recordException(Exception("Error al actualizar reserva: $error"))
+                                Toast.makeText(context, "Error: $error", Toast.LENGTH_LONG).show()
+                            }
+                        }
                     } else {
-                        ReservaRepository.add(
+                        val currentUid = AuthRepository.currentUser?.uid ?: ""
+                        val currentEmail = AuthRepository.currentUser?.email ?: ""
+                        val newReserva = Reserva(
+                            id = "",
                             nombreVisitante = nombre,
                             identificacionContacto = contacto,
                             tipoAlojamiento = tipoAlojamiento,
@@ -305,25 +323,20 @@ class ReservasFragment : Fragment() {
                             fechaEntrada = entrada,
                             fechaSalida = salida,
                             cantidadPersonas = personas,
-                            estado = estadoReserva
+                            estado = estadoReserva,
+                            userId = currentUid,
+                            userEmail = currentEmail
                         )
-
-                        val analyticsBundle = Bundle().apply {
-                            putString("nombre_visitante", nombre)
-                            putString("tipo_alojamiento", tipoAlojamiento.label)
-                            putString("nombre_alojamiento", selectedLugarPair.second)
-                            putInt("cantidad_personas", personas)
-                            putString("fecha_entrada", entrada)
-                            putString("fecha_salida", salida)
-                            putString("estado", estadoReserva.label)
+                        ReservaRepository.add(newReserva, firebaseAnalytics) { success, error ->
+                            if (success) {
+                                Toast.makeText(context, "Reserva creada exitosamente en Cloud Firestore", Toast.LENGTH_SHORT).show()
+                                alertDialog.dismiss()
+                            } else {
+                                FirebaseCrashlytics.getInstance().recordException(Exception("Error al crear reserva: $error"))
+                                Toast.makeText(context, "Error: $error", Toast.LENGTH_LONG).show()
+                            }
                         }
-                        FirebaseAnalytics.getInstance(context).logEvent("reserva_creada", analyticsBundle)
-
-                        Toast.makeText(context, "Reserva creada exitosamente", Toast.LENGTH_SHORT).show()
                     }
-
-                    alertDialog.dismiss()
-                    refreshData()
                 }
                 .setNegativeButton("Cancelar", null)
                 .show()
@@ -335,13 +348,23 @@ class ReservasFragment : Fragment() {
     private fun showDeleteConfirmation(reserva: Reserva) {
         AlertDialog.Builder(requireContext())
             .setTitle("Confirmar Eliminación de Reserva")
-            .setMessage("¿Estás seguro de que deseas eliminar la reserva de '${reserva.nombreVisitante}'?")
+            .setMessage("¿Estás seguro de que deseas eliminar permanentemente la reserva de '${reserva.nombreVisitante}' de Cloud Firestore?")
             .setPositiveButton("Eliminar") { _, _ ->
-                ReservaRepository.delete(reserva.id)
-                Toast.makeText(requireContext(), "Reserva eliminada exitosamente", Toast.LENGTH_SHORT).show()
-                refreshData()
+                ReservaRepository.delete(reserva.id, firebaseAnalytics) { success, error ->
+                    if (success) {
+                        Toast.makeText(requireContext(), "Reserva eliminada exitosamente de Cloud Firestore", Toast.LENGTH_SHORT).show()
+                    } else {
+                        FirebaseCrashlytics.getInstance().recordException(Exception("Error al eliminar reserva: $error"))
+                        Toast.makeText(requireContext(), "Error al eliminar: $error", Toast.LENGTH_LONG).show()
+                    }
+                }
             }
             .setNegativeButton("Cancelar", null)
             .show()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        ReservaRepository.stopListening()
     }
 }

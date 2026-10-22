@@ -12,14 +12,16 @@ enum class EstadoReserva(val label: String) {
 }
 
 data class Reserva(
-    val id: String,
-    val nombreVisitante: String,
-    val identificacionContacto: String,
-    val tipoAlojamiento: TipoAlojamiento,
-    val idAlojamiento: String,
-    val nombreAlojamiento: String,
-    val fechaEntrada: String,
-    val fechaSalida: String,
-    val cantidadPersonas: Int,
-    val estado: EstadoReserva
+    val id: String = "",
+    val nombreVisitante: String = "",
+    val identificacionContacto: String = "",
+    val tipoAlojamiento: TipoAlojamiento = TipoAlojamiento.REFUGIO,
+    val idAlojamiento: String = "",
+    val nombreAlojamiento: String = "",
+    val fechaEntrada: String = "",
+    val fechaSalida: String = "",
+    val cantidadPersonas: Int = 1,
+    val estado: EstadoReserva = EstadoReserva.CONFIRMADA,
+    val userId: String = "",
+    val userEmail: String = ""
 )
