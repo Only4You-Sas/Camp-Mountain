@@ -34,6 +34,22 @@ object AuthRepository {
         return currentUser?.role.equals("Administrador", ignoreCase = true)
     }
 
+    fun canManageRefugiosAndCampamentos(): Boolean {
+        if (isAdmin()) return true
+        val role = currentUser?.role ?: "Visitante"
+        return role.equals("Guardaparque", ignoreCase = true)
+    }
+
+    fun canManageUserRoles(): Boolean {
+        return isAdmin()
+    }
+
+    fun canViewUsers(): Boolean {
+        if (isAdmin()) return true
+        val role = currentUser?.role ?: "Visitante"
+        return role.equals("Guardaparque", ignoreCase = true)
+    }
+
     fun fetchUserData(onComplete: (User?) -> Unit) {
         val fbUser = auth.currentUser
         if (fbUser == null) {
@@ -59,7 +75,7 @@ object AuthRepository {
                         rawNombre
                     }
                     val correo = document.getString("correo") ?: document.getString("email") ?: email
-                    val savedRole = document.getString("rol") ?: document.getString("role") ?: "Guardaparque"
+                    val savedRole = document.getString("rol") ?: document.getString("role") ?: "Visitante"
                     val finalRole = if (isSaimonAdmin) "Administrador" else savedRole
 
                     val user = User(
@@ -81,7 +97,7 @@ object AuthRepository {
                             ?.split(".")
                             ?.joinToString(" ") { word -> word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
                         ?: "Usuario"
-                    val finalRole = if (isSaimonAdmin) "Administrador" else "Guardaparque"
+                    val finalRole = if (isSaimonAdmin) "Administrador" else "Visitante"
                     val fallbackUser = User(
                         uid = fbUser.uid,
                         fullName = fallbackName,
@@ -100,7 +116,7 @@ object AuthRepository {
                     ?.split(".")
                     ?.joinToString(" ") { word -> word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
                     ?: "Usuario"
-                val finalRole = if (isSaimonAdmin) "Administrador" else "Guardaparque"
+                val finalRole = if (isSaimonAdmin) "Administrador" else "Visitante"
                 val fallbackUser = User(
                     uid = fbUser.uid,
                     fullName = fallbackName,
@@ -116,7 +132,7 @@ object AuthRepository {
         uid: String,
         nombre: String,
         correo: String,
-        role: String = "Guardaparque",
+        role: String = "Visitante",
         onComplete: (Boolean, String?) -> Unit = { _, _ -> }
     ) {
         val isSaimonAdmin = correo.trim().equals("saimondaza@hotmail.com", ignoreCase = true) || correo.contains("admin")

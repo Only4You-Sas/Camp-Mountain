@@ -8,6 +8,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.model.User
+import com.simon.campsandmountain.data.repository.AuthRepository
 
 class UsuarioFirestoreAdapter(
     private var list: List<User>,
@@ -33,10 +34,18 @@ class UsuarioFirestoreAdapter(
         val item = list[position]
         holder.tvNombre.text = item.fullName.ifEmpty { "Sin nombre" }
         holder.tvCorreo.text = "✉️ ${item.email}"
-        holder.tvRol.text = item.role.ifEmpty { "Guardaparque" }
+        holder.tvRol.text = item.role.ifEmpty { "Visitante" }
 
-        holder.btnEditar.setOnClickListener { onEditClick(item) }
-        holder.btnEliminar.setOnClickListener { onDeleteClick(item) }
+        val canManageRoles = AuthRepository.canManageUserRoles()
+        if (canManageRoles) {
+            holder.btnEditar.visibility = View.VISIBLE
+            holder.btnEliminar.visibility = View.VISIBLE
+            holder.btnEditar.setOnClickListener { onEditClick(item) }
+            holder.btnEliminar.setOnClickListener { onDeleteClick(item) }
+        } else {
+            holder.btnEditar.visibility = View.GONE
+            holder.btnEliminar.visibility = View.GONE
+        }
     }
 
     override fun getItemCount(): Int = list.size

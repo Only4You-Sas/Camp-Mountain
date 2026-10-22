@@ -9,6 +9,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.model.Campamento
+import com.simon.campsandmountain.data.repository.AuthRepository
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -63,8 +64,16 @@ class CampamentoAdapter(
             holder.tvFogata.setTextColor(ContextCompat.getColor(context, R.color.status_closed))
         }
 
-        holder.btnEditar.setOnClickListener { onEditClick(item) }
-        holder.btnEliminar.setOnClickListener { onDeleteClick(item) }
+        val canManage = AuthRepository.canManageRefugiosAndCampamentos()
+        if (canManage) {
+            holder.btnEditar.visibility = View.VISIBLE
+            holder.btnEliminar.visibility = View.VISIBLE
+            holder.btnEditar.setOnClickListener { onEditClick(item) }
+            holder.btnEliminar.setOnClickListener { onDeleteClick(item) }
+        } else {
+            holder.btnEditar.visibility = View.GONE
+            holder.btnEliminar.visibility = View.GONE
+        }
     }
 
     override fun getItemCount(): Int = list.size

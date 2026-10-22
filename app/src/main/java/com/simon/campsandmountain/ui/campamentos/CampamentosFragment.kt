@@ -19,6 +19,7 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.model.Campamento
+import com.simon.campsandmountain.data.repository.AuthRepository
 import com.simon.campsandmountain.data.repository.CampamentoRepository
 
 class CampamentosFragment : Fragment() {
@@ -48,14 +49,20 @@ class CampamentosFragment : Fragment() {
         val rv: RecyclerView = view.findViewById(R.id.rvCampamentos)
         val fab: FloatingActionButton = view.findViewById(R.id.fabAddCampamento)
 
+        val canManage = AuthRepository.canManageRefugiosAndCampamentos()
+        if (!canManage) {
+            fab.visibility = View.GONE
+        } else {
+            fab.visibility = View.VISIBLE
+            fab.setOnClickListener { showCampamentoFormDialog(null) }
+        }
+
         adapter = CampamentoAdapter(
             list = emptyList(),
             onEditClick = { camp -> showCampamentoFormDialog(camp) },
             onDeleteClick = { camp -> showDeleteConfirmation(camp) }
         )
         rv.adapter = adapter
-
-        fab.setOnClickListener { showCampamentoFormDialog(null) }
 
         etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -65,7 +72,7 @@ class CampamentosFragment : Fragment() {
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        CampamentoRepository.listen(firebaseAnalytics) { list ->
+        CampamentoRepository.listen(firebaseAnalytics) { _ ->
             filterList(etSearch.text.toString())
         }
     }

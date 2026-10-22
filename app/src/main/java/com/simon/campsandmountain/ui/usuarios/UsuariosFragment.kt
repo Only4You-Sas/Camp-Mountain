@@ -54,14 +54,20 @@ class UsuariosFragment : Fragment() {
         val rv: RecyclerView = view.findViewById(R.id.rvUsuariosFirestore)
         val fab: FloatingActionButton = view.findViewById(R.id.fabAddUsuario)
 
+        val canManageRoles = AuthRepository.canManageUserRoles()
+        if (!canManageRoles) {
+            fab.visibility = View.GONE
+        } else {
+            fab.visibility = View.VISIBLE
+            fab.setOnClickListener { showUserFormDialog(null) }
+        }
+
         adapter = UsuarioFirestoreAdapter(
             list = emptyList(),
             onEditClick = { user -> showUserFormDialog(user) },
             onDeleteClick = { user -> showDeleteConfirmation(user) }
         )
         rv.adapter = adapter
-
-        fab.setOnClickListener { showUserFormDialog(null) }
 
         etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -90,7 +96,7 @@ class UsuariosFragment : Fragment() {
                     for (doc in snapshot.documents) {
                         val nombre = doc.getString("nombre") ?: doc.getString("fullName") ?: ""
                         val correo = doc.getString("correo") ?: doc.getString("email") ?: ""
-                        val rawRol = doc.getString("rol") ?: doc.getString("role") ?: "Guardaparque"
+                        val rawRol = doc.getString("rol") ?: doc.getString("role") ?: "Visitante"
                         val isSaimon = correo.trim().equals("saimondaza@hotmail.com", ignoreCase = true) || correo.contains("admin")
                         val finalRol = if (isSaimon) "Administrador" else rawRol
 
