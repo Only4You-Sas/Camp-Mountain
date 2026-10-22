@@ -150,7 +150,7 @@ class CampamentosFragment : Fragment() {
             val actionName = if (campToEdit != null) "actualizar" else "crear"
             AlertDialog.Builder(context)
                 .setTitle("Confirmar Guardado")
-                .setMessage("¿Deseas $actionName el campamento '$nombre' en Cloud Firestore?")
+                .setMessage("¿Deseas $actionName el campamento '$nombre'?")
                 .setPositiveButton("Guardar") { _, _ ->
                     if (campToEdit != null) {
                         val updated = campToEdit.copy(
@@ -184,7 +184,7 @@ class CampamentosFragment : Fragment() {
                         )
                         CampamentoRepository.add(newCampamento, firebaseAnalytics) { success, error ->
                             if (success) {
-                                Toast.makeText(context, "Campamento guardado exitosamente en Cloud Firestore", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Campamento guardado exitosamente", Toast.LENGTH_SHORT).show()
                                 alertDialog.dismiss()
                             } else {
                                 FirebaseCrashlytics.getInstance().recordException(Exception("Error al crear campamento: $error"))
@@ -203,7 +203,7 @@ class CampamentosFragment : Fragment() {
     private fun showDeleteConfirmation(campamento: Campamento) {
         AlertDialog.Builder(requireContext())
             .setTitle("Confirmar Eliminación")
-            .setMessage("¿Estás seguro de que deseas eliminar permanentemente '${campamento.nombre}' de Cloud Firestore?")
+            .setMessage("¿Estás seguro de que deseas eliminar permanentemente '${campamento.nombre}'?")
             .setPositiveButton("Eliminar") { _, _ ->
                 CampamentoRepository.delete(campamento.id, firebaseAnalytics) { success, error ->
                     if (success) {

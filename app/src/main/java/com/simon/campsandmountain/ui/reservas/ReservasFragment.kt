@@ -287,7 +287,7 @@ class ReservasFragment : Fragment() {
             val actionName = if (reservaToEdit != null) "actualizar" else "crear"
             AlertDialog.Builder(context)
                 .setTitle("Confirmar Guardado de Reserva")
-                .setMessage("¿Deseas $actionName la reserva a nombre de '$nombre' en '${selectedLugarPair.second}' en Cloud Firestore?")
+                .setMessage("¿Deseas $actionName la reserva a nombre de '$nombre' en '${selectedLugarPair.second}'?")
                 .setPositiveButton("Guardar") { _, _ ->
                     if (reservaToEdit != null) {
                         val updated = reservaToEdit.copy(
@@ -303,7 +303,7 @@ class ReservasFragment : Fragment() {
                         )
                         ReservaRepository.update(updated, firebaseAnalytics) { success, error ->
                             if (success) {
-                                Toast.makeText(context, "Reserva actualizada exitosamente en Cloud Firestore", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Reserva actualizada exitosamente", Toast.LENGTH_SHORT).show()
                                 alertDialog.dismiss()
                             } else {
                                 FirebaseCrashlytics.getInstance().recordException(Exception("Error al actualizar reserva: $error"))
@@ -329,7 +329,7 @@ class ReservasFragment : Fragment() {
                         )
                         ReservaRepository.add(newReserva, firebaseAnalytics) { success, error ->
                             if (success) {
-                                Toast.makeText(context, "Reserva creada exitosamente en Cloud Firestore", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Reserva creada exitosamente", Toast.LENGTH_SHORT).show()
                                 alertDialog.dismiss()
                             } else {
                                 FirebaseCrashlytics.getInstance().recordException(Exception("Error al crear reserva: $error"))
@@ -348,11 +348,11 @@ class ReservasFragment : Fragment() {
     private fun showDeleteConfirmation(reserva: Reserva) {
         AlertDialog.Builder(requireContext())
             .setTitle("Confirmar Eliminación de Reserva")
-            .setMessage("¿Estás seguro de que deseas eliminar permanentemente la reserva de '${reserva.nombreVisitante}' de Cloud Firestore?")
+            .setMessage("¿Estás seguro de que deseas eliminar la reserva de '${reserva.nombreVisitante}'?")
             .setPositiveButton("Eliminar") { _, _ ->
                 ReservaRepository.delete(reserva.id, firebaseAnalytics) { success, error ->
                     if (success) {
-                        Toast.makeText(requireContext(), "Reserva eliminada exitosamente de Cloud Firestore", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Reserva eliminada exitosamente", Toast.LENGTH_SHORT).show()
                     } else {
                         FirebaseCrashlytics.getInstance().recordException(Exception("Error al eliminar reserva: $error"))
                         Toast.makeText(requireContext(), "Error al eliminar: $error", Toast.LENGTH_LONG).show()

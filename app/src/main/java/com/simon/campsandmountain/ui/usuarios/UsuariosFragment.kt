@@ -173,7 +173,7 @@ class UsuariosFragment : Fragment() {
             val actionName = if (userToEdit != null) "actualizar" else "crear"
             AlertDialog.Builder(context)
                 .setTitle("Confirmar Guardado")
-                .setMessage("¿Deseas $actionName al usuario '$nombre' ($correo) en Cloud Firestore?")
+                .setMessage("¿Deseas $actionName al usuario '$nombre' ($correo)?")
                 .setPositiveButton("Guardar") { _, _ ->
                     val db = getFirestore()
                     val userMap = hashMapOf(
@@ -185,7 +185,7 @@ class UsuariosFragment : Fragment() {
                     if (userToEdit != null) {
                         db.collection("Usuarios").document(userToEdit.uid).set(userMap)
                             .addOnSuccessListener {
-                                Toast.makeText(context, "Usuario actualizado en Firestore", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Usuario actualizado exitosamente", Toast.LENGTH_SHORT).show()
                                 alertDialog.dismiss()
                             }
                             .addOnFailureListener { e ->
@@ -212,11 +212,11 @@ class UsuariosFragment : Fragment() {
     private fun showDeleteConfirmation(user: User) {
         AlertDialog.Builder(requireContext())
             .setTitle("Confirmar Eliminación")
-            .setMessage("¿Estás seguro de eliminar permanentemente a '${user.fullName.ifEmpty { user.email }}' de Cloud Firestore?")
+            .setMessage("¿Estás seguro de eliminar a '${user.fullName.ifEmpty { user.email }}'?")
             .setPositiveButton("Eliminar") { _, _ ->
                 getFirestore().collection("Usuarios").document(user.uid).delete()
                     .addOnSuccessListener {
-                        Toast.makeText(requireContext(), "Usuario eliminado de Firestore", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Usuario eliminado exitosamente", Toast.LENGTH_SHORT).show()
                     }
                     .addOnFailureListener { e ->
                         Toast.makeText(requireContext(), "Error al eliminar: ${e.localizedMessage}", Toast.LENGTH_LONG).show()

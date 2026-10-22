@@ -171,7 +171,7 @@ class RefugiosFragment : Fragment() {
             val actionName = if (refugioToEdit != null) "actualizar" else "crear"
             AlertDialog.Builder(context)
                 .setTitle("Confirmar Guardado")
-                .setMessage("¿Deseas $actionName el refugio '$nombre' en Cloud Firestore?")
+                .setMessage("¿Deseas $actionName el refugio '$nombre'?")
                 .setPositiveButton("Guardar") { _, _ ->
                     if (refugioToEdit != null) {
                         val updated = refugioToEdit.copy(
@@ -205,7 +205,7 @@ class RefugiosFragment : Fragment() {
                         )
                         RefugioRepository.add(newRefugio, firebaseAnalytics) { success, error ->
                             if (success) {
-                                Toast.makeText(context, "Refugio guardado exitosamente en Cloud Firestore", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Refugio guardado exitosamente", Toast.LENGTH_SHORT).show()
                                 alertDialog.dismiss()
                             } else {
                                 FirebaseCrashlytics.getInstance().recordException(Exception("Error al crear refugio: $error"))
@@ -224,7 +224,7 @@ class RefugiosFragment : Fragment() {
     private fun showDeleteConfirmation(refugio: Refugio) {
         AlertDialog.Builder(requireContext())
             .setTitle("Confirmar Eliminación")
-            .setMessage("¿Estás seguro de que deseas eliminar permanentemente '${refugio.nombre}' de Cloud Firestore?")
+            .setMessage("¿Estás seguro de que deseas eliminar permanentemente '${refugio.nombre}'?")
             .setPositiveButton("Eliminar") { _, _ ->
                 RefugioRepository.delete(refugio.id, firebaseAnalytics) { success, error ->
                     if (success) {
