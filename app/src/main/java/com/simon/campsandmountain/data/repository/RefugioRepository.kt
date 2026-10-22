@@ -18,6 +18,39 @@ object RefugioRepository {
     private var cachedList = mutableListOf<Refugio>()
     private var listenerRegistration: ListenerRegistration? = null
 
+    private val defaultRefugiosChilenos = listOf(
+        Refugio(
+            id = "",
+            nombre = "Refugio Los Cuernos",
+            altitudMsnm = 120,
+            capacidadCamas = 36,
+            estado = EstadoRefugio.ABIERTO,
+            precioNocheClp = 98000,
+            ubicacionSector = "Circuito W, Parque Nacional Torres del Paine",
+            telefonoContacto = "+56 61 222 5986"
+        ),
+        Refugio(
+            id = "",
+            nombre = "Refugio Lo Valdés",
+            altitudMsnm = 1900,
+            capacidadCamas = 28,
+            estado = EstadoRefugio.ABIERTO,
+            precioNocheClp = 45000,
+            ubicacionSector = "Valle del Volcán, San José de Maipo",
+            telefonoContacto = "+56 2 2861 1234"
+        ),
+        Refugio(
+            id = "",
+            nombre = "Refugio Teski Volcán Osorno",
+            altitudMsnm = 1240,
+            capacidadCamas = 40,
+            estado = EstadoRefugio.ABIERTO,
+            precioNocheClp = 55000,
+            ubicacionSector = "Ladera Sur Volcán Osorno, Puerto Varas",
+            telefonoContacto = "+56 65 223 3445"
+        )
+    )
+
     fun listen(
         analytics: FirebaseAnalytics? = null,
         onUpdate: (List<Refugio>) -> Unit
@@ -34,6 +67,11 @@ object RefugioRepository {
                 }
 
                 if (snapshot != null) {
+                    if (snapshot.isEmpty) {
+                        seedInitialRefugios()
+                        return@addSnapshotListener
+                    }
+
                     val newList = mutableListOf<Refugio>()
                     for (doc in snapshot.documents) {
                         try {
@@ -72,6 +110,22 @@ object RefugioRepository {
                     onUpdate(cachedList.toList())
                 }
             }
+    }
+
+    private fun seedInitialRefugios() {
+        val db = getDb()
+        for (refugio in defaultRefugiosChilenos) {
+            val map = hashMapOf(
+                "nombre" to refugio.nombre,
+                "altitudMsnm" to refugio.altitudMsnm,
+                "capacidadCamas" to refugio.capacidadCamas,
+                "estado" to refugio.estado.name,
+                "precioNocheClp" to refugio.precioNocheClp,
+                "ubicacionSector" to refugio.ubicacionSector,
+                "telefonoContacto" to refugio.telefonoContacto
+            )
+            db.collection(COLLECTION).add(map)
+        }
     }
 
     fun getAllCached(): List<Refugio> = cachedList.toList()

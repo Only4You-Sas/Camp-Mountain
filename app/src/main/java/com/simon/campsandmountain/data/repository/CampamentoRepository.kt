@@ -17,6 +17,39 @@ object CampamentoRepository {
     private var cachedList = mutableListOf<Campamento>()
     private var listenerRegistration: ListenerRegistration? = null
 
+    private val defaultCampamentosChilenos = listOf(
+        Campamento(
+            id = "",
+            nombre = "Camping Francés",
+            sector = "Valle del Francés, Parque Nacional Torres del Paine",
+            capacidadCarpas = 45,
+            tipoTerreno = "Bosque y Plataformas de Madera",
+            permiteFogata = false,
+            aguaPotable = true,
+            tarifaDiariaClp = 28000
+        ),
+        Campamento(
+            id = "",
+            nombre = "Camping La Junta Cochamó",
+            sector = "Centro del Valle Cochamó, Región de Los Lagos",
+            capacidadCarpas = 60,
+            tipoTerreno = "Pradera de Montaña",
+            permiteFogata = false,
+            aguaPotable = true,
+            tarifaDiariaClp = 12000
+        ),
+        Campamento(
+            id = "",
+            nombre = "Camping Los Ingleses",
+            sector = "Parque Nacional Radal Siete Tazas, Molina",
+            capacidadCarpas = 35,
+            tipoTerreno = "Bosque de Roble con Sombra",
+            permiteFogata = false,
+            aguaPotable = true,
+            tarifaDiariaClp = 15000
+        )
+    )
+
     fun listen(
         analytics: FirebaseAnalytics? = null,
         onUpdate: (List<Campamento>) -> Unit
@@ -33,6 +66,11 @@ object CampamentoRepository {
                 }
 
                 if (snapshot != null) {
+                    if (snapshot.isEmpty) {
+                        seedInitialCampamentos()
+                        return@addSnapshotListener
+                    }
+
                     val newList = mutableListOf<Campamento>()
                     for (doc in snapshot.documents) {
                         try {
@@ -70,6 +108,22 @@ object CampamentoRepository {
                     onUpdate(cachedList.toList())
                 }
             }
+    }
+
+    private fun seedInitialCampamentos() {
+        val db = getDb()
+        for (camp in defaultCampamentosChilenos) {
+            val map = hashMapOf(
+                "nombre" to camp.nombre,
+                "sector" to camp.sector,
+                "capacidadCarpas" to camp.capacidadCarpas,
+                "tipoTerreno" to camp.tipoTerreno,
+                "permiteFogata" to camp.permiteFogata,
+                "aguaPotable" to camp.aguaPotable,
+                "tarifaDiariaClp" to camp.tarifaDiariaClp
+            )
+            db.collection(COLLECTION).add(map)
+        }
     }
 
     fun getAllCached(): List<Campamento> = cachedList.toList()
