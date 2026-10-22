@@ -9,7 +9,7 @@ import java.util.Locale
 object AuthRepository {
     private val auth: FirebaseAuth get() = FirebaseAuth.getInstance()
 
-    private fun getFirestore(): FirebaseFirestore {
+    fun getFirestore(): FirebaseFirestore {
         return try {
             FirebaseFirestore.getInstance("usuarios")
         } catch (_: Exception) {
@@ -26,6 +26,14 @@ object AuthRepository {
         currentUser = null
     }
 
+    fun isAdmin(): Boolean {
+        val email = currentUser?.email?.trim()?.lowercase() ?: auth.currentUser?.email?.trim()?.lowercase() ?: ""
+        if (email.contains("saimondaza@hotmail.com") || email.contains("admin")) {
+            return true
+        }
+        return currentUser?.role.equals("Administrador", ignoreCase = true)
+    }
+
     fun fetchUserData(onComplete: (User?) -> Unit) {
         val fbUser = auth.currentUser
         if (fbUser == null) {
@@ -34,11 +42,14 @@ object AuthRepository {
             return
         }
 
+        val email = fbUser.email ?: ""
+        val isSaimonAdmin = email.trim().equals("saimondaza@hotmail.com", ignoreCase = true) || email.contains("admin")
+
         val db = getFirestore()
         db.collection("Usuarios").document(fbUser.uid).get()
             .addOnSuccessListener { document ->
                 if (document != null && document.exists()) {
-                    val rawNombre = document.getString("nombre")
+                    val rawNombre = document.getString("nombre") ?: document.getString("fullName")
                     val nombre = if (rawNombre.isNullOrBlank() || rawNombre.startsWith("Usuario google") || rawNombre.startsWith("Usuario microsoft")) {
                         fbUser.displayName ?: fbUser.email?.substringBefore("@")
                             ?.split(".")
@@ -47,14 +58,22 @@ object AuthRepository {
                     } else {
                         rawNombre
                     }
-                    val correo = document.getString("correo") ?: fbUser.email ?: ""
+                    val correo = document.getString("correo") ?: document.getString("email") ?: email
+                    val savedRole = document.getString("rol") ?: document.getString("role") ?: "Guardaparque"
+                    val finalRole = if (isSaimonAdmin) "Administrador" else savedRole
+
                     val user = User(
                         uid = fbUser.uid,
                         fullName = nombre,
                         email = correo,
-                        role = "Guardaparque"
+                        role = finalRole
                     )
                     currentUser = user
+
+                    if (isSaimonAdmin && savedRole != "Administrador") {
+                        saveUserDataToFirestore(fbUser.uid, nombre, correo, "Administrador") { _, _ -> }
+                    }
+
                     onComplete(user)
                 } else {
                     val fallbackName = fbUser.displayName
@@ -62,13 +81,17 @@ object AuthRepository {
                             ?.split(".")
                             ?.joinToString(" ") { word -> word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
                         ?: "Usuario"
+                    val finalRole = if (isSaimonAdmin) "Administrador" else "Guardaparque"
                     val fallbackUser = User(
                         uid = fbUser.uid,
                         fullName = fallbackName,
-                        email = fbUser.email ?: "",
-                        role = "Guardaparque"
+                        email = email,
+                        role = finalRole
                     )
                     currentUser = fallbackUser
+
+                    saveUserDataToFirestore(fbUser.uid, fallbackName, email, finalRole) { _, _ -> }
+
                     onComplete(fallbackUser)
                 }
             }
@@ -77,24 +100,35 @@ object AuthRepository {
                     ?.split(".")
                     ?.joinToString(" ") { word -> word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
                     ?: "Usuario"
+                val finalRole = if (isSaimonAdmin) "Administrador" else "Guardaparque"
                 val fallbackUser = User(
                     uid = fbUser.uid,
                     fullName = fallbackName,
-                    email = fbUser.email ?: "",
-                    role = "Guardaparque"
+                    email = email,
+                    role = finalRole
                 )
                 currentUser = fallbackUser
                 onComplete(fallbackUser)
             }
     }
 
-    fun saveUserDataToFirestore(uid: String, nombre: String, correo: String, onComplete: (Boolean, String?) -> Unit) {
+    fun saveUserDataToFirestore(
+        uid: String,
+        nombre: String,
+        correo: String,
+        role: String = "Guardaparque",
+        onComplete: (Boolean, String?) -> Unit = { _, _ -> }
+    ) {
+        val isSaimonAdmin = correo.trim().equals("saimondaza@hotmail.com", ignoreCase = true) || correo.contains("admin")
+        val finalRole = if (isSaimonAdmin) "Administrador" else role
+
         val userMap = hashMapOf(
             "nombre" to nombre,
-            "correo" to correo
+            "correo" to correo,
+            "rol" to finalRole
         )
 
-        currentUser = User(uid = uid, fullName = nombre, email = correo, role = "Guardaparque")
+        currentUser = User(uid = uid, fullName = nombre, email = correo, role = finalRole)
 
         val namedDb = try { FirebaseFirestore.getInstance("usuarios") } catch (_: Exception) { null }
         val defaultDb = FirebaseFirestore.getInstance()

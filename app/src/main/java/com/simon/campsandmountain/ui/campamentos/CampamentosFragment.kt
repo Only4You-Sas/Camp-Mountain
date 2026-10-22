@@ -15,6 +15,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.model.Campamento
 import com.simon.campsandmountain.data.repository.CampamentoRepository
@@ -24,6 +26,7 @@ class CampamentosFragment : Fragment() {
     private lateinit var adapter: CampamentoAdapter
     private lateinit var tvEmpty: TextView
     private lateinit var etSearch: EditText
+    private var firebaseAnalytics: FirebaseAnalytics? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -36,13 +39,17 @@ class CampamentosFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        context?.let {
+            firebaseAnalytics = FirebaseAnalytics.getInstance(it)
+        }
+
         tvEmpty = view.findViewById(R.id.tvEmptyCampamentos)
         etSearch = view.findViewById(R.id.etSearchCampamento)
         val rv: RecyclerView = view.findViewById(R.id.rvCampamentos)
         val fab: FloatingActionButton = view.findViewById(R.id.fabAddCampamento)
 
         adapter = CampamentoAdapter(
-            list = CampamentoRepository.getAll(),
+            list = emptyList(),
             onEditClick = { camp -> showCampamentoFormDialog(camp) },
             onDeleteClick = { camp -> showDeleteConfirmation(camp) }
         )
@@ -58,18 +65,15 @@ class CampamentosFragment : Fragment() {
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        refreshData()
+        CampamentoRepository.listen(firebaseAnalytics) { list ->
+            filterList(etSearch.text.toString())
+        }
     }
 
     private fun filterList(query: String) {
         val filtered = CampamentoRepository.search(query)
         adapter.updateData(filtered)
         tvEmpty.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
-    }
-
-    fun refreshData() {
-        val currentQuery = etSearch.text.toString()
-        filterList(currentQuery)
     }
 
     private fun showCampamentoFormDialog(campToEdit: Campamento?) {
@@ -136,33 +140,54 @@ class CampamentosFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            if (campToEdit != null) {
-                val updated = campToEdit.copy(
-                    nombre = nombre,
-                    sector = sector,
-                    capacidadCarpas = capacidad,
-                    tarifaDiariaClp = tarifa,
-                    tipoTerreno = terreno,
-                    aguaPotable = switchAgua.isChecked,
-                    permiteFogata = switchFogata.isChecked
-                )
-                CampamentoRepository.update(updated)
-                Toast.makeText(context, "Campamento actualizado", Toast.LENGTH_SHORT).show()
-            } else {
-                CampamentoRepository.add(
-                    nombre = nombre,
-                    sector = sector,
-                    capacidadCarpas = capacidad,
-                    tarifaDiariaClp = tarifa,
-                    tipoTerreno = terreno,
-                    aguaPotable = switchAgua.isChecked,
-                    permiteFogata = switchFogata.isChecked
-                )
-                Toast.makeText(context, "Campamento creado exitosamente", Toast.LENGTH_SHORT).show()
-            }
-
-            alertDialog.dismiss()
-            refreshData()
+            val actionName = if (campToEdit != null) "actualizar" else "crear"
+            AlertDialog.Builder(context)
+                .setTitle("Confirmar Guardado")
+                .setMessage("¿Deseas $actionName el campamento '$nombre' en Cloud Firestore?")
+                .setPositiveButton("Guardar") { _, _ ->
+                    if (campToEdit != null) {
+                        val updated = campToEdit.copy(
+                            nombre = nombre,
+                            sector = sector,
+                            capacidadCarpas = capacidad,
+                            tarifaDiariaClp = tarifa,
+                            tipoTerreno = terreno,
+                            aguaPotable = switchAgua.isChecked,
+                            permiteFogata = switchFogata.isChecked
+                        )
+                        CampamentoRepository.update(updated, firebaseAnalytics) { success, error ->
+                            if (success) {
+                                Toast.makeText(context, "Campamento actualizado exitosamente", Toast.LENGTH_SHORT).show()
+                                alertDialog.dismiss()
+                            } else {
+                                FirebaseCrashlytics.getInstance().recordException(Exception("Error al actualizar campamento: $error"))
+                                Toast.makeText(context, "Error: $error", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } else {
+                        val newCampamento = Campamento(
+                            id = "",
+                            nombre = nombre,
+                            sector = sector,
+                            capacidadCarpas = capacidad,
+                            tipoTerreno = terreno,
+                            permiteFogata = switchFogata.isChecked,
+                            aguaPotable = switchAgua.isChecked,
+                            tarifaDiariaClp = tarifa
+                        )
+                        CampamentoRepository.add(newCampamento, firebaseAnalytics) { success, error ->
+                            if (success) {
+                                Toast.makeText(context, "Campamento guardado exitosamente en Cloud Firestore", Toast.LENGTH_SHORT).show()
+                                alertDialog.dismiss()
+                            } else {
+                                FirebaseCrashlytics.getInstance().recordException(Exception("Error al crear campamento: $error"))
+                                Toast.makeText(context, "Error: $error", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
         }
 
         alertDialog.show()
@@ -170,14 +195,24 @@ class CampamentosFragment : Fragment() {
 
     private fun showDeleteConfirmation(campamento: Campamento) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Eliminar Campamento")
-            .setMessage("¿Estás seguro de que deseas eliminar '${campamento.nombre}'?")
+            .setTitle("Confirmar Eliminación")
+            .setMessage("¿Estás seguro de que deseas eliminar permanentemente '${campamento.nombre}' de Cloud Firestore?")
             .setPositiveButton("Eliminar") { _, _ ->
-                CampamentoRepository.delete(campamento.id)
-                Toast.makeText(requireContext(), "Campamento eliminado", Toast.LENGTH_SHORT).show()
-                refreshData()
+                CampamentoRepository.delete(campamento.id, firebaseAnalytics) { success, error ->
+                    if (success) {
+                        Toast.makeText(requireContext(), "Campamento eliminado exitosamente", Toast.LENGTH_SHORT).show()
+                    } else {
+                        FirebaseCrashlytics.getInstance().recordException(Exception("Error al eliminar campamento: $error"))
+                        Toast.makeText(requireContext(), "Error al eliminar: $error", Toast.LENGTH_LONG).show()
+                    }
+                }
             }
             .setNegativeButton("Cancelar", null)
             .show()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        CampamentoRepository.stopListening()
     }
 }

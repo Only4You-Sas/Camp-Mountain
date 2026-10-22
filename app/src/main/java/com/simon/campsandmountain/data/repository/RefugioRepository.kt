@@ -1,91 +1,173 @@
 package com.simon.campsandmountain.data.repository
 
+import android.os.Bundle
+import android.util.Log
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.simon.campsandmountain.data.model.EstadoRefugio
 import com.simon.campsandmountain.data.model.Refugio
-import java.util.UUID
 
 object RefugioRepository {
-    private val list = mutableListOf(
-        Refugio(
-            id = "REF-001",
-            nombre = "Refugio El Cóndor",
-            altitudMsnm = 2450,
-            capacidadCamas = 24,
-            estado = EstadoRefugio.ABIERTO,
-            precioNocheClp = 35000,
-            ubicacionSector = "Valle de la Luna, Sector Norte",
-            telefonoContacto = "+56 9 8765 4321"
-        ),
-        Refugio(
-            id = "REF-002",
-            nombre = "Refugio Volcán Osorno",
-            altitudMsnm = 1820,
-            capacidadCamas = 18,
-            estado = EstadoRefugio.ABIERTO,
-            precioNocheClp = 42500,
-            ubicacionSector = "Ladera Este, Tramo Altura",
-            telefonoContacto = "+56 9 1234 5678"
-        ),
-        Refugio(
-            id = "REF-003",
-            nombre = "Refugio Alturas del Paine",
-            altitudMsnm = 3100,
-            capacidadCamas = 12,
-            estado = EstadoRefugio.MANTENIMIENTO,
-            precioNocheClp = 50000,
-            ubicacionSector = "Paso Los Vientos",
-            telefonoContacto = "+56 9 9988 7766"
-        )
-    )
 
-    fun getAll(): List<Refugio> = list.toList()
+    private const val TAG = "RefugioRepository"
+    private const val COLLECTION = "Refugios"
 
-    fun getById(id: String): Refugio? = list.find { it.id == id }
+    private fun getDb(): FirebaseFirestore = AuthRepository.getFirestore()
+
+    private var cachedList = mutableListOf<Refugio>()
+    private var listenerRegistration: ListenerRegistration? = null
+
+    fun listen(
+        analytics: FirebaseAnalytics? = null,
+        onUpdate: (List<Refugio>) -> Unit
+    ) {
+        listenerRegistration?.remove()
+        val db = getDb()
+
+        listenerRegistration = db.collection(COLLECTION)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.w(TAG, "Listen failed for $COLLECTION", error)
+                    onUpdate(cachedList.toList())
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    val newList = mutableListOf<Refugio>()
+                    for (doc in snapshot.documents) {
+                        try {
+                            val id = doc.id
+                            val nombre = doc.getString("nombre") ?: ""
+                            val altitudMsnm = (doc.getLong("altitudMsnm") ?: 0L).toInt()
+                            val capacidadCamas = (doc.getLong("capacidadCamas") ?: 0L).toInt()
+                            val estadoStr = doc.getString("estado") ?: "ABIERTO"
+                            val estado = try { EstadoRefugio.valueOf(estadoStr) } catch (_: Exception) { EstadoRefugio.ABIERTO }
+                            val precioNocheClp = (doc.getLong("precioNocheClp") ?: 0L).toInt()
+                            val ubicacionSector = doc.getString("ubicacionSector") ?: ""
+                            val telefonoContacto = doc.getString("telefonoContacto") ?: ""
+
+                            val item = Refugio(
+                                id = id,
+                                nombre = nombre,
+                                altitudMsnm = altitudMsnm,
+                                capacidadCamas = capacidadCamas,
+                                estado = estado,
+                                precioNocheClp = precioNocheClp,
+                                ubicacionSector = ubicacionSector,
+                                telefonoContacto = telefonoContacto
+                            )
+                            newList.add(item)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error parsing refugio doc: ${doc.id}", e)
+                        }
+                    }
+                    cachedList = newList
+
+                    analytics?.let {
+                        val bundle = Bundle().apply { putString("tipo_entidad", "refugio") }
+                        it.logEvent("listado_consultado", bundle)
+                    }
+
+                    onUpdate(cachedList.toList())
+                }
+            }
+    }
+
+    fun getAllCached(): List<Refugio> = cachedList.toList()
 
     fun add(
-        nombre: String,
-        altitudMsnm: Int,
-        capacidadCamas: Int,
-        estado: EstadoRefugio,
-        precioNocheClp: Int,
-        ubicacionSector: String,
-        telefonoContacto: String
-    ): Refugio {
-        val newRefugio = Refugio(
-            id = "REF-" + UUID.randomUUID().toString().take(6).uppercase(),
-            nombre = nombre,
-            altitudMsnm = altitudMsnm,
-            capacidadCamas = capacidadCamas,
-            estado = estado,
-            precioNocheClp = precioNocheClp,
-            ubicacionSector = ubicacionSector,
-            telefonoContacto = telefonoContacto
+        refugio: Refugio,
+        analytics: FirebaseAnalytics? = null,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        val db = getDb()
+        val map = hashMapOf(
+            "nombre" to refugio.nombre,
+            "altitudMsnm" to refugio.altitudMsnm,
+            "capacidadCamas" to refugio.capacidadCamas,
+            "estado" to refugio.estado.name,
+            "precioNocheClp" to refugio.precioNocheClp,
+            "ubicacionSector" to refugio.ubicacionSector,
+            "telefonoContacto" to refugio.telefonoContacto
         )
-        list.add(0, newRefugio)
-        return newRefugio
+
+        db.collection(COLLECTION).add(map)
+            .addOnSuccessListener { docRef ->
+                analytics?.let {
+                    val bundle = Bundle().apply { putString("tipo_entidad", "refugio") }
+                    it.logEvent("registro_creado", bundle)
+                }
+                onComplete(true, docRef.id)
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Error adding refugio", e)
+                onComplete(false, e.localizedMessage)
+            }
     }
 
-    fun update(refugio: Refugio): Boolean {
-        val index = list.indexOfFirst { it.id == refugio.id }
-        return if (index != -1) {
-            list[index] = refugio
-            true
-        } else {
-            false
-        }
+    fun update(
+        refugio: Refugio,
+        analytics: FirebaseAnalytics? = null,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        val db = getDb()
+        val map = hashMapOf(
+            "nombre" to refugio.nombre,
+            "altitudMsnm" to refugio.altitudMsnm,
+            "capacidadCamas" to refugio.capacidadCamas,
+            "estado" to refugio.estado.name,
+            "precioNocheClp" to refugio.precioNocheClp,
+            "ubicacionSector" to refugio.ubicacionSector,
+            "telefonoContacto" to refugio.telefonoContacto
+        )
+
+        db.collection(COLLECTION).document(refugio.id).set(map)
+            .addOnSuccessListener {
+                analytics?.let {
+                    val bundle = Bundle().apply { putString("tipo_entidad", "refugio") }
+                    it.logEvent("registro_actualizado", bundle)
+                }
+                onComplete(true, null)
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Error updating refugio ${refugio.id}", e)
+                onComplete(false, e.localizedMessage)
+            }
     }
 
-    fun delete(id: String): Boolean {
-        return list.removeIf { it.id == id }
+    fun delete(
+        id: String,
+        analytics: FirebaseAnalytics? = null,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        val db = getDb()
+        db.collection(COLLECTION).document(id).delete()
+            .addOnSuccessListener {
+                analytics?.let {
+                    val bundle = Bundle().apply { putString("tipo_entidad", "refugio") }
+                    it.logEvent("registro_eliminado", bundle)
+                }
+                onComplete(true, null)
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Error deleting refugio $id", e)
+                onComplete(false, e.localizedMessage)
+            }
     }
 
     fun search(query: String): List<Refugio> {
-        if (query.isBlank()) return getAll()
+        if (query.isBlank()) return getAllCached()
         val q = query.trim().lowercase()
-        return list.filter {
+        return cachedList.filter {
             it.nombre.lowercase().contains(q) ||
                     it.ubicacionSector.lowercase().contains(q) ||
                     it.altitudMsnm.toString().contains(q)
         }
+    }
+
+    fun stopListening() {
+        listenerRegistration?.remove()
+        listenerRegistration = null
     }
 }

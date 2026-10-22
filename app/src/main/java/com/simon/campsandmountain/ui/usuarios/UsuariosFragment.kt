@@ -21,6 +21,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.model.User
+import com.simon.campsandmountain.data.repository.AuthRepository
 
 class UsuariosFragment : Fragment() {
 
@@ -30,13 +31,7 @@ class UsuariosFragment : Fragment() {
     private var allUsersList = mutableListOf<User>()
     private var firestoreListener: ListenerRegistration? = null
 
-    private fun getFirestore(): FirebaseFirestore {
-        return try {
-            FirebaseFirestore.getInstance("usuarios")
-        } catch (_: Exception) {
-            FirebaseFirestore.getInstance()
-        }
-    }
+    private fun getFirestore(): FirebaseFirestore = AuthRepository.getFirestore()
 
     companion object {
         private const val TAG = "UsuariosFragment"
@@ -95,12 +90,15 @@ class UsuariosFragment : Fragment() {
                     for (doc in snapshot.documents) {
                         val nombre = doc.getString("nombre") ?: doc.getString("fullName") ?: ""
                         val correo = doc.getString("correo") ?: doc.getString("email") ?: ""
-                        val rol = doc.getString("rol") ?: doc.getString("role") ?: "Guardaparque"
+                        val rawRol = doc.getString("rol") ?: doc.getString("role") ?: "Guardaparque"
+                        val isSaimon = correo.trim().equals("saimondaza@hotmail.com", ignoreCase = true) || correo.contains("admin")
+                        val finalRol = if (isSaimon) "Administrador" else rawRol
+
                         val user = User(
                             uid = doc.id,
                             fullName = nombre,
                             email = correo,
-                            role = rol
+                            role = finalRol
                         )
                         allUsersList.add(user)
                     }
@@ -155,39 +153,51 @@ class UsuariosFragment : Fragment() {
         btnGuardar.setOnClickListener {
             val nombre = etNombre.text.toString().trim()
             val correo = etCorreo.text.toString().trim()
-            val rol = spinnerRol.text.toString().trim().ifEmpty { "Guardaparque" }
+            var rol = spinnerRol.text.toString().trim().ifEmpty { "Guardaparque" }
 
             if (nombre.isEmpty() || correo.isEmpty()) {
                 Toast.makeText(context, "Por favor ingrese nombre y correo", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            val db = getFirestore()
-            val userMap = hashMapOf(
-                "nombre" to nombre,
-                "correo" to correo,
-                "rol" to rol
-            )
-
-            if (userToEdit != null) {
-                db.collection("Usuarios").document(userToEdit.uid).set(userMap)
-                    .addOnSuccessListener {
-                        Toast.makeText(context, "Usuario actualizado en Firestore", Toast.LENGTH_SHORT).show()
-                        alertDialog.dismiss()
-                    }
-                    .addOnFailureListener { e ->
-                        Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                    }
-            } else {
-                db.collection("Usuarios").add(userMap)
-                    .addOnSuccessListener {
-                        Toast.makeText(context, "Usuario creado exitosamente", Toast.LENGTH_SHORT).show()
-                        alertDialog.dismiss()
-                    }
-                    .addOnFailureListener { e ->
-                        Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                    }
+            if (correo.equals("saimondaza@hotmail.com", ignoreCase = true) || correo.contains("admin")) {
+                rol = "Administrador"
             }
+
+            val actionName = if (userToEdit != null) "actualizar" else "crear"
+            AlertDialog.Builder(context)
+                .setTitle("Confirmar Guardado")
+                .setMessage("¿Deseas $actionName al usuario '$nombre' ($correo) en Cloud Firestore?")
+                .setPositiveButton("Guardar") { _, _ ->
+                    val db = getFirestore()
+                    val userMap = hashMapOf(
+                        "nombre" to nombre,
+                        "correo" to correo,
+                        "rol" to rol
+                    )
+
+                    if (userToEdit != null) {
+                        db.collection("Usuarios").document(userToEdit.uid).set(userMap)
+                            .addOnSuccessListener {
+                                Toast.makeText(context, "Usuario actualizado en Firestore", Toast.LENGTH_SHORT).show()
+                                alertDialog.dismiss()
+                            }
+                            .addOnFailureListener { e ->
+                                Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                            }
+                    } else {
+                        db.collection("Usuarios").add(userMap)
+                            .addOnSuccessListener {
+                                Toast.makeText(context, "Usuario creado exitosamente", Toast.LENGTH_SHORT).show()
+                                alertDialog.dismiss()
+                            }
+                            .addOnFailureListener { e ->
+                                Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                            }
+                    }
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
         }
 
         alertDialog.show()
@@ -195,8 +205,8 @@ class UsuariosFragment : Fragment() {
 
     private fun showDeleteConfirmation(user: User) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Eliminar Usuario")
-            .setMessage("¿Estás seguro de eliminar a '${user.fullName.ifEmpty { user.email }}' de Cloud Firestore?")
+            .setTitle("Confirmar Eliminación")
+            .setMessage("¿Estás seguro de eliminar permanentemente a '${user.fullName.ifEmpty { user.email }}' de Cloud Firestore?")
             .setPositiveButton("Eliminar") { _, _ ->
                 getFirestore().collection("Usuarios").document(user.uid).delete()
                     .addOnSuccessListener {

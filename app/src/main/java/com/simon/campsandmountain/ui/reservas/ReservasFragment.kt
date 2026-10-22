@@ -128,11 +128,11 @@ class ReservasFragment : Fragment() {
         fun updateSpinnerOptions(isRefugio: Boolean) {
             lugaresList.clear()
             if (isRefugio) {
-                RefugioRepository.getAll().forEach {
+                RefugioRepository.getAllCached().forEach {
                     lugaresList.add(Pair(it.id, it.nombre))
                 }
             } else {
-                CampamentoRepository.getAll().forEach {
+                CampamentoRepository.getAllCached().forEach {
                     lugaresList.add(Pair(it.id, it.nombre))
                 }
             }

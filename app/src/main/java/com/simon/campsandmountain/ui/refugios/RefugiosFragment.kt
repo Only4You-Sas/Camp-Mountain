@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.model.EstadoRefugio
 import com.simon.campsandmountain.data.model.Refugio
@@ -27,6 +28,7 @@ class RefugiosFragment : Fragment() {
     private lateinit var adapter: RefugioAdapter
     private lateinit var tvEmpty: TextView
     private lateinit var etSearch: EditText
+    private var firebaseAnalytics: FirebaseAnalytics? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -39,13 +41,17 @@ class RefugiosFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        context?.let {
+            firebaseAnalytics = FirebaseAnalytics.getInstance(it)
+        }
+
         tvEmpty = view.findViewById(R.id.tvEmptyRefugios)
         etSearch = view.findViewById(R.id.etSearchRefugio)
         val rv: RecyclerView = view.findViewById(R.id.rvRefugios)
         val fab: FloatingActionButton = view.findViewById(R.id.fabAddRefugio)
 
         adapter = RefugioAdapter(
-            list = RefugioRepository.getAll(),
+            list = emptyList(),
             onEditClick = { refugio -> showRefugioFormDialog(refugio) },
             onDeleteClick = { refugio -> showDeleteConfirmation(refugio) }
         )
@@ -61,18 +67,15 @@ class RefugiosFragment : Fragment() {
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        refreshData()
+        RefugioRepository.listen(firebaseAnalytics) { list ->
+            filterList(etSearch.text.toString())
+        }
     }
 
     private fun filterList(query: String) {
         val filtered = RefugioRepository.search(query)
         adapter.updateData(filtered)
         tvEmpty.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
-    }
-
-    fun refreshData() {
-        val currentQuery = etSearch.text.toString()
-        filterList(currentQuery)
     }
 
     private fun showRefugioFormDialog(refugioToEdit: Refugio?) {
@@ -158,41 +161,54 @@ class RefugiosFragment : Fragment() {
                 else -> EstadoRefugio.ABIERTO
             }
 
-            if (refugioToEdit != null) {
-                val updated = refugioToEdit.copy(
-                    nombre = nombre,
-                    ubicacionSector = ubicacion,
-                    altitudMsnm = altitud,
-                    capacidadCamas = camas,
-                    precioNocheClp = precio,
-                    telefonoContacto = telefono,
-                    estado = estado
-                )
-                RefugioRepository.update(updated)
-                Toast.makeText(context, "Refugio actualizado", Toast.LENGTH_SHORT).show()
-            } else {
-                RefugioRepository.add(
-                    nombre = nombre,
-                    altitudMsnm = altitud,
-                    capacidadCamas = camas,
-                    estado = estado,
-                    precioNocheClp = precio,
-                    ubicacionSector = ubicacion,
-                    telefonoContacto = telefono
-                )
-
-                val analyticsBundle = Bundle().apply {
-                    putString("item_name", nombre)
-                    putInt("altitud", altitud)
-                    putString("category", "refugio")
+            val actionName = if (refugioToEdit != null) "actualizar" else "crear"
+            AlertDialog.Builder(context)
+                .setTitle("Confirmar Guardado")
+                .setMessage("¿Deseas $actionName el refugio '$nombre' en Cloud Firestore?")
+                .setPositiveButton("Guardar") { _, _ ->
+                    if (refugioToEdit != null) {
+                        val updated = refugioToEdit.copy(
+                            nombre = nombre,
+                            ubicacionSector = ubicacion,
+                            altitudMsnm = altitud,
+                            capacidadCamas = camas,
+                            precioNocheClp = precio,
+                            telefonoContacto = telefono,
+                            estado = estado
+                        )
+                        RefugioRepository.update(updated, firebaseAnalytics) { success, error ->
+                            if (success) {
+                                Toast.makeText(context, "Refugio actualizado exitosamente", Toast.LENGTH_SHORT).show()
+                                alertDialog.dismiss()
+                            } else {
+                                FirebaseCrashlytics.getInstance().recordException(Exception("Error al actualizar refugio: $error"))
+                                Toast.makeText(context, "Error: $error", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } else {
+                        val newRefugio = Refugio(
+                            id = "",
+                            nombre = nombre,
+                            altitudMsnm = altitud,
+                            capacidadCamas = camas,
+                            estado = estado,
+                            precioNocheClp = precio,
+                            ubicacionSector = ubicacion,
+                            telefonoContacto = telefono
+                        )
+                        RefugioRepository.add(newRefugio, firebaseAnalytics) { success, error ->
+                            if (success) {
+                                Toast.makeText(context, "Refugio guardado exitosamente en Cloud Firestore", Toast.LENGTH_SHORT).show()
+                                alertDialog.dismiss()
+                            } else {
+                                FirebaseCrashlytics.getInstance().recordException(Exception("Error al crear refugio: $error"))
+                                Toast.makeText(context, "Error: $error", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
                 }
-                FirebaseAnalytics.getInstance(context).logEvent("refugio_creado", analyticsBundle)
-
-                Toast.makeText(context, "Refugio creado exitosamente", Toast.LENGTH_SHORT).show()
-            }
-
-            alertDialog.dismiss()
-            refreshData()
+                .setNegativeButton("Cancelar", null)
+                .show()
         }
 
         alertDialog.show()
@@ -200,14 +216,24 @@ class RefugiosFragment : Fragment() {
 
     private fun showDeleteConfirmation(refugio: Refugio) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Eliminar Refugio")
-            .setMessage("¿Estás seguro de que deseas eliminar '${refugio.nombre}'?")
+            .setTitle("Confirmar Eliminación")
+            .setMessage("¿Estás seguro de que deseas eliminar permanentemente '${refugio.nombre}' de Cloud Firestore?")
             .setPositiveButton("Eliminar") { _, _ ->
-                RefugioRepository.delete(refugio.id)
-                Toast.makeText(requireContext(), "Refugio eliminado", Toast.LENGTH_SHORT).show()
-                refreshData()
+                RefugioRepository.delete(refugio.id, firebaseAnalytics) { success, error ->
+                    if (success) {
+                        Toast.makeText(requireContext(), "Refugio eliminado exitosamente", Toast.LENGTH_SHORT).show()
+                    } else {
+                        FirebaseCrashlytics.getInstance().recordException(Exception("Error al eliminar refugio: $error"))
+                        Toast.makeText(requireContext(), "Error al eliminar: $error", Toast.LENGTH_LONG).show()
+                    }
+                }
             }
             .setNegativeButton("Cancelar", null)
             .show()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        RefugioRepository.stopListening()
     }
 }
