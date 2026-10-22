@@ -104,19 +104,31 @@ class ReservasFragment : Fragment() {
         val btnCancelar: MaterialButton = dialogView.findViewById(R.id.btnCancelarReserva)
         val btnGuardar: MaterialButton = dialogView.findViewById(R.id.btnGuardarReserva)
 
-        val calendar = Calendar.getInstance()
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val esLocale = Locale.Builder().setLanguage("es").setRegion("CL").build()
+        val calendar = Calendar.getInstance(esLocale)
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", esLocale)
 
         fun showDatePicker(targetEditText: EditText) {
             val y = calendar.get(Calendar.YEAR)
             val m = calendar.get(Calendar.MONTH)
             val d = calendar.get(Calendar.DAY_OF_MONTH)
 
-            DatePickerDialog(context, { _, year, month, dayOfMonth ->
-                val selectedCal = Calendar.getInstance()
+            val datePicker = DatePickerDialog(context, { _, year, month, dayOfMonth ->
+                val selectedCal = Calendar.getInstance(esLocale)
                 selectedCal.set(year, month, dayOfMonth)
                 targetEditText.setText(dateFormat.format(selectedCal.time))
-            }, y, m, d).show()
+            }, y, m, d)
+
+            // Restringir el calendario para no permitir seleccionar fechas anteriores al día de hoy
+            val todayStart = Calendar.getInstance(esLocale).apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            datePicker.datePicker.minDate = todayStart.timeInMillis
+
+            datePicker.show()
         }
 
         etEntrada.setOnClickListener { showDatePicker(etEntrada) }
@@ -231,8 +243,25 @@ class ReservasFragment : Fragment() {
                 return@setOnClickListener
             }
 
+            val todayStart = Calendar.getInstance(esLocale).apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.time
+
+            if (dateEntrada.before(todayStart)) {
+                Toast.makeText(context, "La fecha de entrada no puede ser anterior al día de hoy", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+
+            if (dateSalida.before(todayStart)) {
+                Toast.makeText(context, "La fecha de salida no puede ser anterior al día de hoy", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+
             if (dateSalida.before(dateEntrada)) {
-                Toast.makeText(context, "La fecha de salida no puede ser anterior a la fecha de entrada", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "La fecha de salida debe ser posterior o igual a la fecha de entrada", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
 
@@ -247,49 +276,57 @@ class ReservasFragment : Fragment() {
             val tipoAlojamiento = if (isRefugio) TipoAlojamiento.REFUGIO else TipoAlojamiento.CAMPAMENTO
             val estadoReserva = if (rgEstado.checkedRadioButtonId == R.id.rbConfirmada) EstadoReserva.CONFIRMADA else EstadoReserva.PENDIENTE
 
-            if (reservaToEdit != null) {
-                val updated = reservaToEdit.copy(
-                    nombreVisitante = nombre,
-                    identificacionContacto = contacto,
-                    tipoAlojamiento = tipoAlojamiento,
-                    idAlojamiento = selectedLugarPair.first,
-                    nombreAlojamiento = selectedLugarPair.second,
-                    fechaEntrada = entrada,
-                    fechaSalida = salida,
-                    cantidadPersonas = personas,
-                    estado = estadoReserva
-                )
-                ReservaRepository.update(updated)
-                Toast.makeText(context, "Reserva actualizada", Toast.LENGTH_SHORT).show()
-            } else {
-                ReservaRepository.add(
-                    nombreVisitante = nombre,
-                    identificacionContacto = contacto,
-                    tipoAlojamiento = tipoAlojamiento,
-                    idAlojamiento = selectedLugarPair.first,
-                    nombreAlojamiento = selectedLugarPair.second,
-                    fechaEntrada = entrada,
-                    fechaSalida = salida,
-                    cantidadPersonas = personas,
-                    estado = estadoReserva
-                )
+            val actionName = if (reservaToEdit != null) "actualizar" else "crear"
+            AlertDialog.Builder(context)
+                .setTitle("Confirmar Guardado de Reserva")
+                .setMessage("¿Deseas $actionName la reserva a nombre de '$nombre' en '${selectedLugarPair.second}'?")
+                .setPositiveButton("Guardar") { _, _ ->
+                    if (reservaToEdit != null) {
+                        val updated = reservaToEdit.copy(
+                            nombreVisitante = nombre,
+                            identificacionContacto = contacto,
+                            tipoAlojamiento = tipoAlojamiento,
+                            idAlojamiento = selectedLugarPair.first,
+                            nombreAlojamiento = selectedLugarPair.second,
+                            fechaEntrada = entrada,
+                            fechaSalida = salida,
+                            cantidadPersonas = personas,
+                            estado = estadoReserva
+                        )
+                        ReservaRepository.update(updated)
+                        Toast.makeText(context, "Reserva actualizada exitosamente", Toast.LENGTH_SHORT).show()
+                    } else {
+                        ReservaRepository.add(
+                            nombreVisitante = nombre,
+                            identificacionContacto = contacto,
+                            tipoAlojamiento = tipoAlojamiento,
+                            idAlojamiento = selectedLugarPair.first,
+                            nombreAlojamiento = selectedLugarPair.second,
+                            fechaEntrada = entrada,
+                            fechaSalida = salida,
+                            cantidadPersonas = personas,
+                            estado = estadoReserva
+                        )
 
-                val analyticsBundle = Bundle().apply {
-                    putString("nombre_visitante", nombre)
-                    putString("tipo_alojamiento", tipoAlojamiento.label)
-                    putString("nombre_alojamiento", selectedLugarPair.second)
-                    putInt("cantidad_personas", personas)
-                    putString("fecha_entrada", entrada)
-                    putString("fecha_salida", salida)
-                    putString("estado", estadoReserva.label)
+                        val analyticsBundle = Bundle().apply {
+                            putString("nombre_visitante", nombre)
+                            putString("tipo_alojamiento", tipoAlojamiento.label)
+                            putString("nombre_alojamiento", selectedLugarPair.second)
+                            putInt("cantidad_personas", personas)
+                            putString("fecha_entrada", entrada)
+                            putString("fecha_salida", salida)
+                            putString("estado", estadoReserva.label)
+                        }
+                        FirebaseAnalytics.getInstance(context).logEvent("reserva_creada", analyticsBundle)
+
+                        Toast.makeText(context, "Reserva creada exitosamente", Toast.LENGTH_SHORT).show()
+                    }
+
+                    alertDialog.dismiss()
+                    refreshData()
                 }
-                FirebaseAnalytics.getInstance(context).logEvent("reserva_creada", analyticsBundle)
-
-                Toast.makeText(context, "Reserva creada exitosamente", Toast.LENGTH_SHORT).show()
-            }
-
-            alertDialog.dismiss()
-            refreshData()
+                .setNegativeButton("Cancelar", null)
+                .show()
         }
 
         alertDialog.show()
@@ -297,11 +334,11 @@ class ReservasFragment : Fragment() {
 
     private fun showDeleteConfirmation(reserva: Reserva) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Eliminar Reserva")
+            .setTitle("Confirmar Eliminación de Reserva")
             .setMessage("¿Estás seguro de que deseas eliminar la reserva de '${reserva.nombreVisitante}'?")
             .setPositiveButton("Eliminar") { _, _ ->
                 ReservaRepository.delete(reserva.id)
-                Toast.makeText(requireContext(), "Reserva eliminada", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Reserva eliminada exitosamente", Toast.LENGTH_SHORT).show()
                 refreshData()
             }
             .setNegativeButton("Cancelar", null)

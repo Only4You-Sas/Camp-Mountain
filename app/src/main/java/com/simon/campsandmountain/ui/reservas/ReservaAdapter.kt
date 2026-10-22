@@ -11,6 +11,7 @@ import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.model.EstadoReserva
 import com.simon.campsandmountain.data.model.Reserva
 import com.simon.campsandmountain.data.model.TipoAlojamiento
+import com.simon.campsandmountain.data.repository.AuthRepository
 
 class ReservaAdapter(
     private var list: List<Reserva>,
@@ -52,7 +53,15 @@ class ReservaAdapter(
         holder.tvEstado.setTextColor(color)
 
         holder.btnEditar.setOnClickListener { onEditClick(item) }
-        holder.btnEliminar.setOnClickListener { onDeleteClick(item) }
+
+        // Solo Administrador y Guardaparque pueden eliminar reservas
+        val canDelete = AuthRepository.canManageRefugiosAndCampamentos()
+        if (canDelete) {
+            holder.btnEliminar.visibility = View.VISIBLE
+            holder.btnEliminar.setOnClickListener { onDeleteClick(item) }
+        } else {
+            holder.btnEliminar.visibility = View.GONE
+        }
     }
 
     override fun getItemCount(): Int = list.size
