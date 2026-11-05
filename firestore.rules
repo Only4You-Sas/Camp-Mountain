@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Funciones auxiliares de seguridad
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/Usuarios/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == "saimondaza@hotmail.com" ||
+        getUserData().rol == "Administrador" ||
+        getUserData().role == "Administrador"
+      );
+    }
+
+    function isGuardaparque() {
+      return isAuthenticated() && (
+        getUserData().rol == "Guardaparque" ||
+        getUserData().role == "Guardaparque"
+      );
+    }
+
+    function isStaff() {
+      return isAdmin() || isGuardaparque();
+    }
+
+    // Reglas para la colección 'Usuarios'
+    match /Usuarios/{userId} {
+      // Cualquiera autenticado puede consultar usuarios
+      allow read: if isAuthenticated();
+      // Un usuario nuevo puede crear su propio perfil
+      allow create: if isAuthenticated();
+      // Solo administradores o el propio usuario pueden modificar o eliminar perfil
+      allow update, delete: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
+    }
+
+    // Reglas para la colección 'Refugios'
+    match /Refugios/{refugioId} {
+      // Cualquier usuario autenticado (Visitante, Guardaparque, Admin) puede consultar refugios
+      allow read: if isAuthenticated();
+      // Solo Administradores y Guardaparques pueden crear, actualizar o eliminar refugios
+      allow create, update, delete: if isStaff();
+    }
+
+    // Reglas para la colección 'Campamentos'
+    match /Campamentos/{campamentoId} {
+      // Cualquier usuario autenticado (Visitante, Guardaparque, Admin) puede consultar campamentos
+      allow read: if isAuthenticated();
+      // Solo Administradores y Guardaparques pueden crear, actualizar o eliminar campamentos
+      allow create, update, delete: if isStaff();
+    }
+
+    // Reglas para la colección 'Reservas'
+    match /Reservas/{reservaId} {
+      // Cualquier usuario autenticado puede consultar reservas
+      allow read: if isAuthenticated();
+      // Cualquier usuario autenticado (incluyendo Visitante) puede agendar/crear reservas
+      allow create: if isAuthenticated();
+      // Un usuario solo puede modificar o cancelar SUS PROPIAS reservas (userId coincidente),
+      // a menos que sea Administrador o Guardaparque (Staff)
+      allow update, delete: if isStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
+  }
+}

@@ -31,6 +31,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/NOTICE.md"
+            excludes += "META-INF/LICENSE.md"
+        }
+    }
 }
 
 dependencies {
@@ -49,4 +56,16 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.android.gms:play-services-auth:21.3.0")
+
+    // Task 1: Passkeys & Credentials Manager
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+
+    // Task 2: Retrofit & Gson
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.google.code.gson:gson:2.11.0")
+
+    // Task 3: OpenCSV
+    implementation("com.opencsv:opencsv:5.9")
 }
