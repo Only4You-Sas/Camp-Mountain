@@ -25,7 +25,7 @@ object RefugioRepository {
             altitudMsnm = 120,
             capacidadCamas = 36,
             estado = EstadoRefugio.ABIERTO,
-            precioNocheClp = 98000,
+            precioNocheClp = 0,
             ubicacionSector = "Circuito W, Parque Nacional Torres del Paine",
             telefonoContacto = "+56 61 222 5986"
         ),
@@ -35,7 +35,7 @@ object RefugioRepository {
             altitudMsnm = 1900,
             capacidadCamas = 28,
             estado = EstadoRefugio.ABIERTO,
-            precioNocheClp = 45000,
+            precioNocheClp = 0,
             ubicacionSector = "Valle del Volcán, San José de Maipo",
             telefonoContacto = "+56 2 2861 1234"
         ),
@@ -45,7 +45,7 @@ object RefugioRepository {
             altitudMsnm = 1240,
             capacidadCamas = 40,
             estado = EstadoRefugio.ABIERTO,
-            precioNocheClp = 55000,
+            precioNocheClp = 0,
             ubicacionSector = "Ladera Sur Volcán Osorno, Puerto Varas",
             telefonoContacto = "+56 65 223 3445"
         )
@@ -120,7 +120,7 @@ object RefugioRepository {
                 "altitudMsnm" to refugio.altitudMsnm,
                 "capacidadCamas" to refugio.capacidadCamas,
                 "estado" to refugio.estado.name,
-                "precioNocheClp" to refugio.precioNocheClp,
+                "precioNocheClp" to 0,
                 "ubicacionSector" to refugio.ubicacionSector,
                 "telefonoContacto" to refugio.telefonoContacto
             )
@@ -141,7 +141,7 @@ object RefugioRepository {
             "altitudMsnm" to refugio.altitudMsnm,
             "capacidadCamas" to refugio.capacidadCamas,
             "estado" to refugio.estado.name,
-            "precioNocheClp" to refugio.precioNocheClp,
+            "precioNocheClp" to 0,
             "ubicacionSector" to refugio.ubicacionSector,
             "telefonoContacto" to refugio.telefonoContacto
         )
@@ -171,7 +171,7 @@ object RefugioRepository {
             "altitudMsnm" to refugio.altitudMsnm,
             "capacidadCamas" to refugio.capacidadCamas,
             "estado" to refugio.estado.name,
-            "precioNocheClp" to refugio.precioNocheClp,
+            "precioNocheClp" to 0,
             "ubicacionSector" to refugio.ubicacionSector,
             "telefonoContacto" to refugio.telefonoContacto
         )

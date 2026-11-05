@@ -11,8 +11,6 @@ import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.model.EstadoRefugio
 import com.simon.campsandmountain.data.model.Refugio
 import com.simon.campsandmountain.data.repository.AuthRepository
-import java.text.NumberFormat
-import java.util.Locale
 
 class RefugioAdapter(
     private var list: List<Refugio>,
@@ -40,13 +38,13 @@ class RefugioAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = list[position]
         val context = holder.itemView.context
-        val clpFormat = NumberFormat.getInstance(Locale("es", "CL")).format(item.precioNocheClp)
 
         holder.tvNombre.text = item.nombre
         holder.tvUbicacion.text = "📍 ${item.ubicacionSector}"
         holder.tvAltitud.text = "⛰️ ${item.altitudMsnm} m.s.n.m."
         holder.tvCamas.text = "🛏️ ${item.capacidadCamas} camas"
-        holder.tvPrecio.text = "💵 $$clpFormat / noche"
+        holder.tvPrecio.text = "🆓 Gratuito (Sin Costo)"
+        holder.tvPrecio.setTextColor(ContextCompat.getColor(context, R.color.primary_green))
 
         holder.tvEstado.text = item.estado.displayName
         val colorRes = when (item.estado) {

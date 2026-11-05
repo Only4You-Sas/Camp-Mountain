@@ -103,13 +103,16 @@ class RefugiosFragment : Fragment() {
         val btnCancelar: MaterialButton = dialogView.findViewById(R.id.btnCancelar)
         val btnGuardar: MaterialButton = dialogView.findViewById(R.id.btnGuardar)
 
+        // Los refugios son de uso gratuito (sin costo)
+        etPrecio.setText("0")
+        etPrecio.isEnabled = false
+
         if (refugioToEdit != null) {
             tvTitle.text = "Editar Refugio"
             etNombre.setText(refugioToEdit.nombre)
             etUbicacion.setText(refugioToEdit.ubicacionSector)
             etAltitud.setText(refugioToEdit.altitudMsnm.toString())
             etCamas.setText(refugioToEdit.capacidadCamas.toString())
-            etPrecio.setText(refugioToEdit.precioNocheClp.toString())
             etTelefono.setText(refugioToEdit.telefonoContacto)
             when (refugioToEdit.estado) {
                 EstadoRefugio.ABIERTO -> rbAbierto.isChecked = true
@@ -131,7 +134,6 @@ class RefugiosFragment : Fragment() {
             val ubicacion = etUbicacion.text.toString().trim()
             val altitudStr = etAltitud.text.toString().trim()
             val camasStr = etCamas.text.toString().trim()
-            val precioStr = etPrecio.text.toString().trim()
             val telefono = etTelefono.text.toString().trim()
 
             if (nombre.isEmpty()) {
@@ -152,11 +154,6 @@ class RefugiosFragment : Fragment() {
                 Toast.makeText(context, "Ingrese una cantidad de camas válida (mayor a 0)", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            val precio = precioStr.toIntOrNull()
-            if (precio == null || precio <= 0) {
-                Toast.makeText(context, "Ingrese un precio por noche válido (mayor a 0)", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
             if (telefono.isEmpty()) {
                 Toast.makeText(context, "Debe ingresar un teléfono de contacto", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -171,7 +168,7 @@ class RefugiosFragment : Fragment() {
             val actionName = if (refugioToEdit != null) "actualizar" else "crear"
             AlertDialog.Builder(context)
                 .setTitle("Confirmar Guardado")
-                .setMessage("¿Deseas $actionName el refugio '$nombre'?")
+                .setMessage("¿Deseas $actionName el refugio '$nombre' (Gratuito)?")
                 .setPositiveButton("Guardar") { _, _ ->
                     if (refugioToEdit != null) {
                         val updated = refugioToEdit.copy(
@@ -179,7 +176,7 @@ class RefugiosFragment : Fragment() {
                             ubicacionSector = ubicacion,
                             altitudMsnm = altitud,
                             capacidadCamas = camas,
-                            precioNocheClp = precio,
+                            precioNocheClp = 0,
                             telefonoContacto = telefono,
                             estado = estado
                         )
@@ -199,7 +196,7 @@ class RefugiosFragment : Fragment() {
                             altitudMsnm = altitud,
                             capacidadCamas = camas,
                             estado = estado,
-                            precioNocheClp = precio,
+                            precioNocheClp = 0,
                             ubicacionSector = ubicacion,
                             telefonoContacto = telefono
                         )
