@@ -6,24 +6,31 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.messaging.FirebaseMessaging
+import com.simon.campsandmountain.auth.PasskeyAuthManager
+import com.simon.campsandmountain.data.importer.CsvBatchImporter
 import com.simon.campsandmountain.data.repository.AuthRepository
+import com.simon.campsandmountain.location.AddressValidationManager
 import com.simon.campsandmountain.ui.campamentos.CampamentosFragment
 import com.simon.campsandmountain.ui.login.LoginActivity
 import com.simon.campsandmountain.ui.refugios.RefugiosFragment
 import com.simon.campsandmountain.ui.reservas.ReservasFragment
 import com.simon.campsandmountain.ui.usuarios.UsuariosFragment
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -85,6 +92,10 @@ class MainActivity : AppCompatActivity() {
 
         topAppBar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
+                R.id.action_tools -> {
+                    showAdvancedToolsDialog()
+                    true
+                }
                 R.id.action_logout -> {
                     AuthRepository.logout()
                     Toast.makeText(this, "Sesión cerrada correctamente", Toast.LENGTH_SHORT).show()
@@ -127,6 +138,103 @@ class MainActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             bottomNav.selectedItemId = R.id.nav_refugios
+        }
+    }
+
+    private fun showAdvancedToolsDialog() {
+        val options = arrayOf(
+            "🔑 Probar Passkeys & Biometría",
+            "🗺️ Validar Dirección con Retrofit & Nominatim",
+            "📊 Importar CSV Masivo a Firestore (OpenCSV)"
+        )
+
+        AlertDialog.Builder(this)
+            .setTitle("🛠️ Herramientas Avanzadas")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> testPasskeys()
+                    1 -> testAddressValidation()
+                    2 -> testCsvImport()
+                }
+            }
+            .setNegativeButton("Cerrar", null)
+            .show()
+    }
+
+    private fun testPasskeys() {
+        val currentUser = AuthRepository.currentUser
+        val username = currentUser?.email ?: "usuario@campandmountain.com"
+        val displayName = currentUser?.fullName ?: "Usuario Camp & Mountain"
+
+        lifecycleScope.launch {
+            Toast.makeText(this@MainActivity, "Iniciando creación de Passkey...", Toast.LENGTH_SHORT).show()
+            val result = PasskeyAuthManager.createPasskey(this@MainActivity, username, displayName)
+            if (result.isSuccess) {
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("🔑 Passkey Creada Exitosamente")
+                    .setMessage("Se ha guardado la Passkey vinculada a '$username' mediante autenticación biométrica de Android.")
+                    .setPositiveButton("OK", null)
+                    .show()
+            } else {
+                Toast.makeText(this@MainActivity, "Resultado Passkey: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun testAddressValidation() {
+        val input = EditText(this)
+        input.hint = "Ej: Plaza de Armas, Santiago, Chile"
+        input.setText("Parque Nacional Torres del Paine, Chile")
+
+        AlertDialog.Builder(this)
+            .setTitle("🗺️ Validar Dirección (Retrofit / Nominatim)")
+            .setView(input)
+            .setPositiveButton("Validar y Guardar en Firestore") { _, _ ->
+                val address = input.text.toString().trim()
+                if (address.isNotEmpty()) {
+                    lifecycleScope.launch {
+                        Toast.makeText(this@MainActivity, "Consultando API de Nominatim con Retrofit...", Toast.LENGTH_SHORT).show()
+                        AddressValidationManager.validateAddressAndSaveToFirestore(address) { success, message, data ->
+                            runOnUiThread {
+                                if (success && data != null) {
+                                    val lat = data["latitud"]
+                                    val lon = data["longitud"]
+                                    val fullName = data["nombreCompleto"]
+                                    AlertDialog.Builder(this@MainActivity)
+                                        .setTitle("✅ Dirección Validada y Guardada")
+                                        .setMessage("Lugar: $fullName\n\nLatitud: $lat\nLongitud: $lon\n\nGuardado en la colección 'DireccionesValidadas' de Cloud Firestore.")
+                                        .setPositiveButton("OK", null)
+                                        .show()
+                                } else {
+                                    Toast.makeText(this@MainActivity, message ?: "Error al validar dirección", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun testCsvImport() {
+        lifecycleScope.launch {
+            Toast.makeText(this@MainActivity, "Importando 'refugios_muestra.csv' a Firestore con OpenCSV y WriteBatch...", Toast.LENGTH_SHORT).show()
+            val result = CsvBatchImporter.importCsvFromAssetsToFirestore(
+                context = this@MainActivity,
+                assetFileName = "refugios_muestra.csv",
+                collectionName = "RefugiosPrueba"
+            )
+            if (result.isSuccess) {
+                val count = result.getOrDefault(0)
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("📊 Importación Masiva Completada")
+                    .setMessage("Se importaron exitosamente $count registros desde el archivo CSV a la colección 'RefugiosPrueba' en Cloud Firestore usando lotes WriteBatch.")
+                    .setPositiveButton("OK", null)
+                    .show()
+            } else {
+                Toast.makeText(this@MainActivity, "Error en importación: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
