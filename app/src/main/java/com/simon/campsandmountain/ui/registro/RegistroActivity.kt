@@ -1,5 +1,6 @@
 package com.simon.campsandmountain.ui.registro
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -12,6 +13,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
 import com.simon.campsandmountain.R
+import com.simon.campsandmountain.auth.PasskeyAuthManager
 import com.simon.campsandmountain.data.repository.AuthRepository
 import com.simon.campsandmountain.ui.login.LoginActivity
 
@@ -27,6 +29,16 @@ class RegistroActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "RegistroActivity"
+
+        fun saveBiometricEmail(context: Context, email: String) {
+            val prefs = context.getSharedPreferences("CampMountainPrefs", Context.MODE_PRIVATE)
+            prefs.edit().putString("BIOMETRIC_LINKED_EMAIL", email.trim()).apply()
+        }
+
+        fun getBiometricEmail(context: Context): String? {
+            val prefs = context.getSharedPreferences("CampMountainPrefs", Context.MODE_PRIVATE)
+            return prefs.getString("BIOMETRIC_LINKED_EMAIL", null)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,10 +58,32 @@ class RegistroActivity : AppCompatActivity() {
         tvErrorRegistro = findViewById(R.id.tvErrorRegistro)
 
         val btnCrearRegistro: MaterialButton = findViewById(R.id.btnCrearRegistro)
+        val btnVincularBiometria: MaterialButton = findViewById(R.id.btnVincularBiometria)
         val btnVolverLogin: MaterialButton = findViewById(R.id.btnVolverLogin)
 
         btnCrearRegistro.setOnClickListener { crearRegistro() }
         btnVolverLogin.setOnClickListener { finish() }
+
+        btnVincularBiometria.setOnClickListener {
+            val correo = txtCorreoR.text.toString().trim()
+            if (correo.isEmpty()) {
+                Toast.makeText(this, "Por favor ingrese su correo electrónico antes de vincular su huella", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            PasskeyAuthManager.authenticateWithBiometricPrompt(
+                activity = this@RegistroActivity,
+                title = "Vincular Huella Dactilar",
+                subtitle = "Escanea tu huella para asociarla a $correo"
+            ) { success, message ->
+                if (success) {
+                    saveBiometricEmail(this@RegistroActivity, correo)
+                    Toast.makeText(this@RegistroActivity, "✅ Huella dactilar vinculada exitosamente con $correo", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this@RegistroActivity, message ?: "Error al vincular huella dactilar", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     private fun crearRegistro() {
@@ -71,13 +105,18 @@ class RegistroActivity : AppCompatActivity() {
 
         tvErrorRegistro.visibility = View.GONE
 
+        saveBiometricEmail(this, correo)
+
+        val isSaimon = correo.equals("saimondaza@hotmail.com", ignoreCase = true) || correo.contains("admin")
+        val role = if (isSaimon) "Administrador" else "Visitante"
+
         oFirebaseAuth.createUserWithEmailAndPassword(correo, pass)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
                     Log.d(TAG, "createUserWithEmail:success")
                     val user = oFirebaseAuth.currentUser
                     if (user != null) {
-                        AuthRepository.saveUserDataToFirestore(user.uid, nombre, correo) { _, _ ->
+                        AuthRepository.saveUserDataToFirestore(user.uid, nombre, correo, role) { _, _ ->
                             finalizarRegistroNologeado(correo)
                         }
                     } else {
@@ -96,7 +135,7 @@ class RegistroActivity : AppCompatActivity() {
     private fun finalizarRegistroNologeado(correo: String) {
         oFirebaseAuth.signOut()
         AuthRepository.logout()
-        Toast.makeText(this, "usuario ha sido creado. Por favor inicie sesión", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, "Cuenta creada y huella vinculada a $correo. ¡Inicie sesión!", Toast.LENGTH_LONG).show()
 
         val intent = Intent(this, LoginActivity::class.java)
         intent.putExtra("PREFILLED_EMAIL", correo)

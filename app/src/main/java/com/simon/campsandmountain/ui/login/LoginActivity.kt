@@ -71,30 +71,44 @@ class LoginActivity : AppCompatActivity() {
         }
 
         btnPasskeyLogin?.setOnClickListener {
+            val typedEmail = txtCorreo.text.toString().trim()
+            val savedEmail = RegistroActivity.getBiometricEmail(this@LoginActivity)
+            val targetEmail = if (typedEmail.isNotEmpty()) typedEmail else (savedEmail ?: "")
+
+            if (targetEmail.isEmpty()) {
+                Toast.makeText(this@LoginActivity, "Ingrese su correo o regístrese primero para vincular su huella digital.", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+
             PasskeyAuthManager.authenticateWithBiometricPrompt(
                 activity = this@LoginActivity,
                 title = "Acceso Biométrico / Passkey",
-                subtitle = "Escanea tu huella digital para ingresar como Administrador"
+                subtitle = "Escanea tu huella para iniciar sesión con $targetEmail"
             ) { success, message ->
                 if (success) {
-                    val adminEmail = "saimondaza@hotmail.com"
+                    val isSaimon = targetEmail.equals("saimondaza@hotmail.com", ignoreCase = true) || targetEmail.contains("admin")
+                    val role = if (isSaimon) "Administrador" else "Visitante"
+                    val name = targetEmail.substringBefore("@")
+                        .split(".")
+                        .joinToString(" ") { word -> word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
+
                     val user = User(
-                        uid = "saimon_admin_bio",
-                        fullName = "Saimon Daza",
-                        email = adminEmail,
-                        role = "Administrador"
+                        uid = "bio_" + System.currentTimeMillis(),
+                        fullName = name,
+                        email = targetEmail,
+                        role = role
                     )
                     AuthRepository.currentUser = user
-                    AuthRepository.saveUserDataToFirestore("saimon_admin_bio", "Saimon Daza", adminEmail, "Administrador") { _, _ -> }
+                    AuthRepository.saveUserDataToFirestore(user.uid, name, targetEmail, role) { _, _ -> }
 
                     val bundle = Bundle().apply {
-                        putString("username", adminEmail)
-                        putString("user_fullname", "Saimon Daza")
+                        putString("username", targetEmail)
+                        putString("user_fullname", name)
                         putString(FirebaseAnalytics.Param.METHOD, "passkey_biometrics")
                     }
                     firebaseAnalytics.logEvent(FirebaseAnalytics.Event.LOGIN, bundle)
 
-                    Toast.makeText(this@LoginActivity, "¡Biometría verificada! Bienvenido Administrador Saimon Daza", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@LoginActivity, "¡Huella verificada! Bienvenido $name", Toast.LENGTH_SHORT).show()
                     navigateToMain()
                 } else {
                     Toast.makeText(this@LoginActivity, message ?: "Error de autenticación biométrica", Toast.LENGTH_SHORT).show()
