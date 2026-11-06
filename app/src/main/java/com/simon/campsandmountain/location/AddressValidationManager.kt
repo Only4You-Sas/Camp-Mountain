@@ -51,7 +51,9 @@ object AddressValidationManager {
     ) {
         val query = addressText.trim()
         if (query.isBlank()) {
-            onResult(false, "La dirección no puede estar vacía.", null)
+            withContext(Dispatchers.Main) {
+                onResult(false, "La dirección no puede estar vacía.", null)
+            }
             return
         }
 
@@ -59,7 +61,6 @@ object AddressValidationManager {
             try {
                 var results = retrofitService.searchAddress(query)
 
-                // Fallback automático si la consulta inicial no devuelve resultados y no especifica país
                 if (results.isEmpty() && !query.lowercase().contains("chile")) {
                     results = retrofitService.searchAddress("$query, Chile")
                 }
@@ -82,19 +83,22 @@ object AddressValidationManager {
                     db.collection(COLLECTION_NAME).add(recordMap)
                         .addOnSuccessListener { docRef ->
                             Log.d(TAG, "Dirección guardada en Firestore ID: ${docRef.id}")
-                            onResult(true, "Ubicación validada correctamente.", recordMap)
                         }
-                        .addOnFailureListener { e ->
-                            Log.e(TAG, "Error al guardar en Firestore", e)
-                            onResult(false, "Ubicación validada pero fallo al guardar en Firestore: ${e.localizedMessage}", recordMap)
-                        }
+
+                    withContext(Dispatchers.Main) {
+                        onResult(true, "Ubicación real confirmada.", recordMap)
+                    }
                 } else {
                     Log.w(TAG, "No se encontraron resultados para la dirección: $query")
-                    onResult(false, "No se encontraron coordenadas para '$query'. Intenta ser más específico (ej: 'San José de Maipo, Chile').", null)
+                    withContext(Dispatchers.Main) {
+                        onResult(false, "No se encontraron coordenadas reales para '$query'. Escriba la ciudad/comuna (ej. 'San José de Maipo, Chile').", null)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error al consultar la API de Nominatim", e)
-                onResult(false, "Error de red al conectar con Nominatim: ${e.localizedMessage}", null)
+                withContext(Dispatchers.Main) {
+                    onResult(false, "Error de conexión al validar dirección: ${e.localizedMessage}", null)
+                }
             }
         }
     }

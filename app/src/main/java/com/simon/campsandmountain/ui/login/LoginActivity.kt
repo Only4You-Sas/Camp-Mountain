@@ -77,41 +77,30 @@ class LoginActivity : AppCompatActivity() {
                 subtitle = "Escanea tu huella digital, rostro o PIN para ingresar"
             ) { success, message ->
                 if (success) {
-                    Toast.makeText(this@LoginActivity, "¡Biometría verificada correctamente!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@LoginActivity, "¡Biometría verificada correctamente! Accediendo...", Toast.LENGTH_SHORT).show()
                     val inputEmail = txtCorreo.text.toString().trim()
                     val targetEmail = if (inputEmail.isNotEmpty()) inputEmail else "saimondaza@hotmail.com"
+                    val isSaimon = targetEmail.trim().equals("saimondaza@hotmail.com", ignoreCase = true) || targetEmail.contains("admin")
+                    val role = if (isSaimon) "Administrador" else "Visitante"
+                    val name = if (isSaimon) "Saimon Daza" else "Usuario Biométrico"
 
-                    if (mAuth.currentUser != null) {
-                        AuthRepository.fetchUserData {
-                            navigateToMain()
-                        }
-                    } else {
-                        mAuth.signInAnonymously()
-                            .addOnCompleteListener { task ->
-                                val uid = if (task.isSuccessful) mAuth.currentUser?.uid ?: "bio_${System.currentTimeMillis()}" else "bio_${System.currentTimeMillis()}"
-                                val isSaimon = targetEmail.trim().equals("saimondaza@hotmail.com", ignoreCase = true) || targetEmail.contains("admin")
-                                val role = if (isSaimon) "Administrador" else "Visitante"
-                                val name = if (isSaimon) "Saimon Daza" else "Usuario Biométrico"
+                    val user = User(
+                        uid = "bio_" + System.currentTimeMillis(),
+                        fullName = name,
+                        email = targetEmail,
+                        role = role
+                    )
+                    AuthRepository.currentUser = user
+                    AuthRepository.saveUserDataToFirestore(user.uid, name, targetEmail, role) { _, _ -> }
 
-                                val user = User(
-                                    uid = uid,
-                                    fullName = name,
-                                    email = targetEmail,
-                                    role = role
-                                )
-                                AuthRepository.currentUser = user
-                                AuthRepository.saveUserDataToFirestore(uid, name, targetEmail, role) { _, _ -> }
-
-                                val bundle = Bundle().apply {
-                                    putString("username", targetEmail)
-                                    putString("user_fullname", name)
-                                    putString(FirebaseAnalytics.Param.METHOD, "passkey_biometrics")
-                                }
-                                firebaseAnalytics.logEvent(FirebaseAnalytics.Event.LOGIN, bundle)
-
-                                navigateToMain()
-                            }
+                    val bundle = Bundle().apply {
+                        putString("username", targetEmail)
+                        putString("user_fullname", name)
+                        putString(FirebaseAnalytics.Param.METHOD, "passkey_biometrics")
                     }
+                    firebaseAnalytics.logEvent(FirebaseAnalytics.Event.LOGIN, bundle)
+
+                    navigateToMain()
                 } else {
                     Toast.makeText(this@LoginActivity, message ?: "Error de autenticación biométrica", Toast.LENGTH_SHORT).show()
                 }
