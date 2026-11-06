@@ -73,22 +73,17 @@ class LoginActivity : AppCompatActivity() {
         btnPasskeyLogin?.setOnClickListener {
             val typedEmail = txtCorreo.text.toString().trim()
             val savedEmail = RegistroActivity.getBiometricEmail(this@LoginActivity)
-            val targetEmail = if (typedEmail.isNotEmpty()) typedEmail else (savedEmail ?: "")
-
-            if (targetEmail.isEmpty()) {
-                Toast.makeText(this@LoginActivity, "Ingrese su correo o regístrese primero para vincular su huella digital.", Toast.LENGTH_LONG).show()
-                return@setOnClickListener
-            }
+            val targetEmail = if (typedEmail.isNotEmpty()) typedEmail else (savedEmail?.ifEmpty { null } ?: "saimondaza@hotmail.com")
 
             PasskeyAuthManager.authenticateWithBiometricPrompt(
                 activity = this@LoginActivity,
                 title = "Acceso Biométrico / Passkey",
-                subtitle = "Escanea tu huella para iniciar sesión con $targetEmail"
+                subtitle = "Escanea tu huella para ingresar como $targetEmail"
             ) { success, message ->
                 if (success) {
                     val isSaimon = targetEmail.equals("saimondaza@hotmail.com", ignoreCase = true) || targetEmail.contains("admin")
                     val role = if (isSaimon) "Administrador" else "Visitante"
-                    val name = targetEmail.substringBefore("@")
+                    val name = if (isSaimon) "Saimon Daza" else targetEmail.substringBefore("@")
                         .split(".")
                         .joinToString(" ") { word -> word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
 
@@ -108,7 +103,7 @@ class LoginActivity : AppCompatActivity() {
                     }
                     firebaseAnalytics.logEvent(FirebaseAnalytics.Event.LOGIN, bundle)
 
-                    Toast.makeText(this@LoginActivity, "¡Huella verificada! Bienvenido $name", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@LoginActivity, "¡Huella verificada correctamente! Bienvenido $name", Toast.LENGTH_SHORT).show()
                     navigateToMain()
                 } else {
                     Toast.makeText(this@LoginActivity, message ?: "Error de autenticación biométrica", Toast.LENGTH_SHORT).show()

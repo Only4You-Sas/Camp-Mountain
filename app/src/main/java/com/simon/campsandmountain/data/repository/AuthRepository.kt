@@ -19,7 +19,7 @@ object AuthRepository {
 
     var currentUser: User? = null
 
-    fun isLoggedIn(): Boolean = auth.currentUser != null
+    fun isLoggedIn(): Boolean = auth.currentUser != null || currentUser != null
 
     fun logout() {
         auth.signOut()
@@ -51,6 +51,11 @@ object AuthRepository {
     }
 
     fun fetchUserData(onComplete: (User?) -> Unit) {
+        if (currentUser != null) {
+            onComplete(currentUser)
+            return
+        }
+
         val fbUser = auth.currentUser
         if (fbUser == null) {
             currentUser = null
