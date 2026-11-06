@@ -12,9 +12,6 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Query
 
-/**
- * Modelo de respuesta de la API pública OpenStreetMap Nominatim.
- */
 data class NominatimResponseItem(
     @SerializedName("place_id") val placeId: Long,
     @SerializedName("lat") val lat: String,
@@ -24,22 +21,16 @@ data class NominatimResponseItem(
     @SerializedName("importance") val importance: Double?
 )
 
-/**
- * Interfaz Retrofit para consultar OpenStreetMap Nominatim API.
- */
 interface NominatimApiService {
     @GET("search")
     suspend fun searchAddress(
         @Query("q") address: String,
         @Query("format") format: String = "json",
-        @Query("limit") limit: Int = 1,
-        @Header("User-Agent") userAgent: String = "CampAndMountainApp/1.0 (contact@campandmountain.com)"
+        @Query("limit") limit: Int = 3,
+        @Header("User-Agent") userAgent: String = "CampAndMountainApp/1.0"
     ): List<NominatimResponseItem>
 }
 
-/**
- * Servicio profesional para validar direcciones con Retrofit/Nominatim y guardarlas en Cloud Firestore.
- */
 object AddressValidationManager {
 
     private const val TAG = "AddressValidation"
@@ -54,22 +45,24 @@ object AddressValidationManager {
             .create(NominatimApiService::class.java)
     }
 
-    /**
-     * Valida una dirección en formato texto mediante Nominatim (Retrofit)
-     * y guarda el resultado geocodificado en Cloud Firestore.
-     */
     suspend fun validateAddressAndSaveToFirestore(
         addressText: String,
         onResult: (Boolean, String?, Map<String, Any>?) -> Unit
     ) {
-        if (addressText.isBlank()) {
+        val query = addressText.trim()
+        if (query.isBlank()) {
             onResult(false, "La dirección no puede estar vacía.", null)
             return
         }
 
         withContext(Dispatchers.IO) {
             try {
-                val results = retrofitService.searchAddress(addressText.trim())
+                var results = retrofitService.searchAddress(query)
+
+                // Fallback automático si la consulta inicial no devuelve resultados y no especifica país
+                if (results.isEmpty() && !query.lowercase().contains("chile")) {
+                    results = retrofitService.searchAddress("$query, Chile")
+                }
 
                 if (results.isNotEmpty()) {
                     val topResult = results[0]
@@ -77,7 +70,7 @@ object AddressValidationManager {
                     val lonNum = topResult.lon.toDoubleOrNull() ?: 0.0
 
                     val recordMap = hashMapOf<String, Any>(
-                        "direccionConsultada" to addressText.trim(),
+                        "direccionConsultada" to query,
                         "nombreCompleto" to topResult.displayName,
                         "latitud" to latNum,
                         "longitud" to lonNum,
@@ -88,20 +81,20 @@ object AddressValidationManager {
                     val db = FirebaseFirestore.getInstance()
                     db.collection(COLLECTION_NAME).add(recordMap)
                         .addOnSuccessListener { docRef ->
-                            Log.d(TAG, "Dirección guardada en Firestore con ID: ${docRef.id}")
-                            onResult(true, "Dirección validada y guardada exitosamente.", recordMap)
+                            Log.d(TAG, "Dirección guardada en Firestore ID: ${docRef.id}")
+                            onResult(true, "Ubicación validada correctamente.", recordMap)
                         }
                         .addOnFailureListener { e ->
-                            Log.e(TAG, "Error al guardar dirección en Firestore", e)
-                            onResult(false, "Válida en API pero fallo al guardar en Firestore: ${e.localizedMessage}", recordMap)
+                            Log.e(TAG, "Error al guardar en Firestore", e)
+                            onResult(false, "Ubicación validada pero fallo al guardar en Firestore: ${e.localizedMessage}", recordMap)
                         }
                 } else {
-                    Log.w(TAG, "No se encontraron resultados para la dirección: $addressText")
-                    onResult(false, "No se encontraron resultados válidos para la dirección especificada.", null)
+                    Log.w(TAG, "No se encontraron resultados para la dirección: $query")
+                    onResult(false, "No se encontraron coordenadas para '$query'. Intenta ser más específico (ej: 'San José de Maipo, Chile').", null)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error al consultar la API de Nominatim con Retrofit", e)
-                onResult(false, "Error de red/API: ${e.localizedMessage}", null)
+                Log.e(TAG, "Error al consultar la API de Nominatim", e)
+                onResult(false, "Error de red al conectar con Nominatim: ${e.localizedMessage}", null)
             }
         }
     }

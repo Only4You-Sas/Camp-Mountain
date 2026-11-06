@@ -134,6 +134,9 @@ class RefugiosFragment : Fragment() {
         val btnCancelar: MaterialButton = dialogView.findViewById(R.id.btnCancelar)
         val btnGuardar: MaterialButton = dialogView.findViewById(R.id.btnGuardar)
 
+        var currentLat = refugioToEdit?.latitud ?: 0.0
+        var currentLon = refugioToEdit?.longitud ?: 0.0
+
         // Los refugios son de uso gratuito (sin costo)
         etPrecio.setText("0")
         etPrecio.isEnabled = false
@@ -150,10 +153,10 @@ class RefugiosFragment : Fragment() {
                     activity?.runOnUiThread {
                         if (success && data != null) {
                             val full = data["nombreCompleto"] as? String ?: rawAddress
-                            val lat = data["latitud"]
-                            val lon = data["longitud"]
+                            currentLat = (data["latitud"] as? Double) ?: 0.0
+                            currentLon = (data["longitud"] as? Double) ?: 0.0
                             etUbicacion.setText(full)
-                            Toast.makeText(context, "✅ Ubicación validada (Lat: $lat, Lon: $lon) y guardada en Firestore", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "✅ Ubicación validada con Retrofit (Lat: $currentLat, Lon: $currentLon) y guardada en Firestore", Toast.LENGTH_LONG).show()
                         } else {
                             Toast.makeText(context, msg ?: "No se encontraron resultados", Toast.LENGTH_SHORT).show()
                         }
@@ -233,7 +236,9 @@ class RefugiosFragment : Fragment() {
                             capacidadCamas = camas,
                             precioNocheClp = 0,
                             telefonoContacto = telefono,
-                            estado = estado
+                            estado = estado,
+                            latitud = currentLat,
+                            longitud = currentLon
                         )
                         RefugioRepository.update(updated, firebaseAnalytics) { success, error ->
                             if (success) {
@@ -253,7 +258,9 @@ class RefugiosFragment : Fragment() {
                             estado = estado,
                             precioNocheClp = 0,
                             ubicacionSector = ubicacion,
-                            telefonoContacto = telefono
+                            telefonoContacto = telefono,
+                            latitud = currentLat,
+                            longitud = currentLon
                         )
                         RefugioRepository.add(newRefugio, firebaseAnalytics) { success, error ->
                             if (success) {

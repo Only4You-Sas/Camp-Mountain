@@ -129,6 +129,9 @@ class CampamentosFragment : Fragment() {
         val btnCancelar: MaterialButton = dialogView.findViewById(R.id.btnCancelarCamp)
         val btnGuardar: MaterialButton = dialogView.findViewById(R.id.btnGuardarCamp)
 
+        var currentLat = campToEdit?.latitud ?: 0.0
+        var currentLon = campToEdit?.longitud ?: 0.0
+
         btnValidarUbicacionCamp.setOnClickListener {
             val rawAddress = etSector.text.toString().trim()
             if (rawAddress.isEmpty()) {
@@ -141,10 +144,10 @@ class CampamentosFragment : Fragment() {
                     activity?.runOnUiThread {
                         if (success && data != null) {
                             val full = data["nombreCompleto"] as? String ?: rawAddress
-                            val lat = data["latitud"]
-                            val lon = data["longitud"]
+                            currentLat = (data["latitud"] as? Double) ?: 0.0
+                            currentLon = (data["longitud"] as? Double) ?: 0.0
                             etSector.setText(full)
-                            Toast.makeText(context, "✅ Ubicación validada (Lat: $lat, Lon: $lon) y guardada en Firestore", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "✅ Ubicación validada con Retrofit (Lat: $currentLat, Lon: $currentLon) y guardada en Firestore", Toast.LENGTH_LONG).show()
                         } else {
                             Toast.makeText(context, msg ?: "No se encontraron resultados", Toast.LENGTH_SHORT).show()
                         }
@@ -215,7 +218,9 @@ class CampamentosFragment : Fragment() {
                             tarifaDiariaClp = tarifa,
                             tipoTerreno = terreno,
                             aguaPotable = switchAgua.isChecked,
-                            permiteFogata = switchFogata.isChecked
+                            permiteFogata = switchFogata.isChecked,
+                            latitud = currentLat,
+                            longitud = currentLon
                         )
                         CampamentoRepository.update(updated, firebaseAnalytics) { success, error ->
                             if (success) {
@@ -235,7 +240,9 @@ class CampamentosFragment : Fragment() {
                             tipoTerreno = terreno,
                             permiteFogata = switchFogata.isChecked,
                             aguaPotable = switchAgua.isChecked,
-                            tarifaDiariaClp = tarifa
+                            tarifaDiariaClp = tarifa,
+                            latitud = currentLat,
+                            longitud = currentLon
                         )
                         CampamentoRepository.add(newCampamento, firebaseAnalytics) { success, error ->
                             if (success) {
