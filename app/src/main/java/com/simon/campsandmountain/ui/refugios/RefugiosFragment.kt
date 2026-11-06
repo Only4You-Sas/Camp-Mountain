@@ -144,11 +144,12 @@ class RefugiosFragment : Fragment() {
         btnValidarUbicacion.setOnClickListener {
             val rawAddress = etUbicacion.text.toString().trim()
             if (rawAddress.isEmpty()) {
-                Toast.makeText(context, "Ingrese una ubicación para validar", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Debe ingresar una ubicación para validar", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+            Toast.makeText(context, "Validando ubicación...", Toast.LENGTH_SHORT).show()
+
             lifecycleScope.launch {
-                Toast.makeText(context, "Validando dirección con Retrofit (Nominatim)...", Toast.LENGTH_SHORT).show()
                 AddressValidationManager.validateAddressAndSaveToFirestore(rawAddress) { success, msg, data ->
                     activity?.runOnUiThread {
                         if (success && data != null) {
@@ -156,9 +157,9 @@ class RefugiosFragment : Fragment() {
                             currentLat = (data["latitud"] as? Double) ?: 0.0
                             currentLon = (data["longitud"] as? Double) ?: 0.0
                             etUbicacion.setText(full)
-                            Toast.makeText(context, "✅ Ubicación validada con Retrofit (Lat: $currentLat, Lon: $currentLon) y guardada en Firestore", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "✅ Validación correcta. Ubicación real confirmada (Lat: $currentLat, Lon: $currentLon)", Toast.LENGTH_LONG).show()
                         } else {
-                            Toast.makeText(context, msg ?: "No se encontraron resultados", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "❌ No se pudo validar. Verifique la dirección o intente incluir la comuna/país.", Toast.LENGTH_LONG).show()
                         }
                     }
                 }
