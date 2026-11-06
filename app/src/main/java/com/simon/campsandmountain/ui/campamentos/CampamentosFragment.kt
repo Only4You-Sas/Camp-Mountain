@@ -11,6 +11,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -21,6 +22,8 @@ import com.simon.campsandmountain.R
 import com.simon.campsandmountain.data.model.Campamento
 import com.simon.campsandmountain.data.repository.AuthRepository
 import com.simon.campsandmountain.data.repository.CampamentoRepository
+import com.simon.campsandmountain.location.AddressValidationManager
+import kotlinx.coroutines.launch
 
 class CampamentosFragment : Fragment() {
 
@@ -90,6 +93,7 @@ class CampamentosFragment : Fragment() {
         val tvTitle: TextView = dialogView.findViewById(R.id.tvFormTitleCamp)
         val etNombre: EditText = dialogView.findViewById(R.id.etNombreCamp)
         val etSector: EditText = dialogView.findViewById(R.id.etSectorCamp)
+        val btnValidarUbicacionCamp: MaterialButton = dialogView.findViewById(R.id.btnValidarUbicacionCamp)
         val etCapacidad: EditText = dialogView.findViewById(R.id.etCapacidadCarpas)
         val etTarifa: EditText = dialogView.findViewById(R.id.etTarifa)
         val etTerreno: EditText = dialogView.findViewById(R.id.etTipoTerreno)
@@ -97,6 +101,30 @@ class CampamentosFragment : Fragment() {
         val switchFogata: MaterialSwitch = dialogView.findViewById(R.id.switchPermiteFogata)
         val btnCancelar: MaterialButton = dialogView.findViewById(R.id.btnCancelarCamp)
         val btnGuardar: MaterialButton = dialogView.findViewById(R.id.btnGuardarCamp)
+
+        btnValidarUbicacionCamp.setOnClickListener {
+            val rawAddress = etSector.text.toString().trim()
+            if (rawAddress.isEmpty()) {
+                Toast.makeText(context, "Ingrese un sector o ubicación para validar", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            lifecycleScope.launch {
+                Toast.makeText(context, "Validando dirección con Retrofit (Nominatim)...", Toast.LENGTH_SHORT).show()
+                AddressValidationManager.validateAddressAndSaveToFirestore(rawAddress) { success, msg, data ->
+                    activity?.runOnUiThread {
+                        if (success && data != null) {
+                            val full = data["nombreCompleto"] as? String ?: rawAddress
+                            val lat = data["latitud"]
+                            val lon = data["longitud"]
+                            etSector.setText(full)
+                            Toast.makeText(context, "✅ Ubicación validada (Lat: $lat, Lon: $lon) y guardada en Firestore", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(context, msg ?: "No se encontraron resultados", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
 
         if (campToEdit != null) {
             tvTitle.text = "Editar Campamento"

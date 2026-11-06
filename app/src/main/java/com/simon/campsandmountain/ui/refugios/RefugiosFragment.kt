@@ -13,6 +13,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -23,6 +24,8 @@ import com.simon.campsandmountain.data.model.EstadoRefugio
 import com.simon.campsandmountain.data.model.Refugio
 import com.simon.campsandmountain.data.repository.AuthRepository
 import com.simon.campsandmountain.data.repository.RefugioRepository
+import com.simon.campsandmountain.location.AddressValidationManager
+import kotlinx.coroutines.launch
 
 class RefugiosFragment : Fragment() {
 
@@ -92,6 +95,7 @@ class RefugiosFragment : Fragment() {
         val tvTitle: TextView = dialogView.findViewById(R.id.tvFormTitle)
         val etNombre: EditText = dialogView.findViewById(R.id.etNombre)
         val etUbicacion: EditText = dialogView.findViewById(R.id.etUbicacion)
+        val btnValidarUbicacion: MaterialButton = dialogView.findViewById(R.id.btnValidarUbicacion)
         val etAltitud: EditText = dialogView.findViewById(R.id.etAltitud)
         val etCamas: EditText = dialogView.findViewById(R.id.etCamas)
         val etPrecio: EditText = dialogView.findViewById(R.id.etPrecio)
@@ -106,6 +110,30 @@ class RefugiosFragment : Fragment() {
         // Los refugios son de uso gratuito (sin costo)
         etPrecio.setText("0")
         etPrecio.isEnabled = false
+
+        btnValidarUbicacion.setOnClickListener {
+            val rawAddress = etUbicacion.text.toString().trim()
+            if (rawAddress.isEmpty()) {
+                Toast.makeText(context, "Ingrese una ubicación para validar", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            lifecycleScope.launch {
+                Toast.makeText(context, "Validando dirección con Retrofit (Nominatim)...", Toast.LENGTH_SHORT).show()
+                AddressValidationManager.validateAddressAndSaveToFirestore(rawAddress) { success, msg, data ->
+                    activity?.runOnUiThread {
+                        if (success && data != null) {
+                            val full = data["nombreCompleto"] as? String ?: rawAddress
+                            val lat = data["latitud"]
+                            val lon = data["longitud"]
+                            etUbicacion.setText(full)
+                            Toast.makeText(context, "✅ Ubicación validada (Lat: $lat, Lon: $lon) y guardada en Firestore", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(context, msg ?: "No se encontraron resultados", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
 
         if (refugioToEdit != null) {
             tvTitle.text = "Editar Refugio"

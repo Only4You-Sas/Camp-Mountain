@@ -1,0 +1,4 @@
+nombre,sector,capacidadCarpas,tipoTerreno,permiteFogata,aguaPotable,tarifaDiariaClp
+Camping Pehoé,Sector Lago Pehoé, Torres del Paine,50,Pradera con Cortavientos,false,true,25000
+Camping Playa Blanca,Reserva Nacional Lago Peñuelas, Valparaíso,40,Bosque de Eucaliptus,false,true,10000
+Camping Conguillío,Parque Nacional Conguillío, Melipeuco,55,Tierra Volcánica y Araucarias,false,true,18000

@@ -116,6 +116,16 @@
                     app:cornerRadius="12dp" />
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPasskeyLogin"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="10dp"
+                    android:text="🔐 Iniciar con Passkey / Biometría"
+                    android:textColor="@color/primary_dark_green"
+                    app:cornerRadius="12dp" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnRegistrar"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="match_parent"
