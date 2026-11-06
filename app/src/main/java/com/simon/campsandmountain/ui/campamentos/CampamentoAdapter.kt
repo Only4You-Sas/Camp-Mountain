@@ -1,5 +1,7 @@
 package com.simon.campsandmountain.ui.campamentos
 
+import android.content.Intent
+import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -43,7 +45,7 @@ class CampamentoAdapter(
         val clpFormat = NumberFormat.getInstance(Locale("es", "CL")).format(item.tarifaDiariaClp)
 
         holder.tvNombre.text = item.nombre
-        holder.tvSector.text = "📍 ${item.sector}"
+        holder.tvSector.text = "📍 ${item.sector} 🗺️"
         holder.tvCapacidad.text = "⛺ ${item.capacidadCarpas} carpas"
         holder.tvTerreno.text = "🌱 ${item.tipoTerreno}"
         holder.tvTarifa.text = "💵 $$clpFormat / día"
@@ -62,6 +64,23 @@ class CampamentoAdapter(
         } else {
             holder.tvFogata.text = "🔥 Fogatas: Prohibidas"
             holder.tvFogata.setTextColor(ContextCompat.getColor(context, R.color.status_closed))
+        }
+
+        // Al presionar la ubicación se abre Google Maps / Mapas del teléfono
+        holder.tvSector.setOnClickListener {
+            val query = if (item.latitud != 0.0 && item.longitud != 0.0) {
+                "geo:${item.latitud},${item.longitud}?q=${item.latitud},${item.longitud}(${Uri.encode(item.nombre)})"
+            } else {
+                "geo:0,0?q=${Uri.encode(item.sector)}"
+            }
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(query))
+                context.startActivity(intent)
+            } catch (_: Exception) {
+                val webQuery = "https://www.google.com/maps/search/?api=1&query=${Uri.encode(item.sector)}"
+                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(webQuery))
+                context.startActivity(webIntent)
+            }
         }
 
         val canManage = AuthRepository.canManageRefugiosAndCampamentos()

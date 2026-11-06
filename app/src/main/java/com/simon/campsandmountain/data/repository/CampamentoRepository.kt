@@ -26,7 +26,9 @@ object CampamentoRepository {
             tipoTerreno = "Bosque y Plataformas de Madera",
             permiteFogata = false,
             aguaPotable = true,
-            tarifaDiariaClp = 28000
+            tarifaDiariaClp = 28000,
+            latitud = -51.1218,
+            longitud = -72.9324
         ),
         Campamento(
             id = "",
@@ -36,7 +38,9 @@ object CampamentoRepository {
             tipoTerreno = "Pradera de Montaña",
             permiteFogata = false,
             aguaPotable = true,
-            tarifaDiariaClp = 12000
+            tarifaDiariaClp = 12000,
+            latitud = -41.4872,
+            longitud = -72.1332
         ),
         Campamento(
             id = "",
@@ -46,7 +50,9 @@ object CampamentoRepository {
             tipoTerreno = "Bosque de Roble con Sombra",
             permiteFogata = false,
             aguaPotable = true,
-            tarifaDiariaClp = 15000
+            tarifaDiariaClp = 15000,
+            latitud = -35.4641,
+            longitud = -71.0264
         )
     )
 
@@ -82,6 +88,8 @@ object CampamentoRepository {
                             val permiteFogata = doc.getBoolean("permiteFogata") ?: false
                             val aguaPotable = doc.getBoolean("aguaPotable") ?: false
                             val tarifaDiariaClp = (doc.getLong("tarifaDiariaClp") ?: 0L).toInt()
+                            val latitud = doc.getDouble("latitud") ?: 0.0
+                            val longitud = doc.getDouble("longitud") ?: 0.0
 
                             val item = Campamento(
                                 id = id,
@@ -91,7 +99,9 @@ object CampamentoRepository {
                                 tipoTerreno = tipoTerreno,
                                 permiteFogata = permiteFogata,
                                 aguaPotable = aguaPotable,
-                                tarifaDiariaClp = tarifaDiariaClp
+                                tarifaDiariaClp = tarifaDiariaClp,
+                                latitud = latitud,
+                                longitud = longitud
                             )
                             newList.add(item)
                         } catch (e: Exception) {
@@ -120,7 +130,9 @@ object CampamentoRepository {
                 "tipoTerreno" to camp.tipoTerreno,
                 "permiteFogata" to camp.permiteFogata,
                 "aguaPotable" to camp.aguaPotable,
-                "tarifaDiariaClp" to camp.tarifaDiariaClp
+                "tarifaDiariaClp" to camp.tarifaDiariaClp,
+                "latitud" to camp.latitud,
+                "longitud" to camp.longitud
             )
             db.collection(COLLECTION).add(map)
         }
@@ -141,7 +153,9 @@ object CampamentoRepository {
             "tipoTerreno" to campamento.tipoTerreno,
             "permiteFogata" to campamento.permiteFogata,
             "aguaPotable" to campamento.aguaPotable,
-            "tarifaDiariaClp" to campamento.tarifaDiariaClp
+            "tarifaDiariaClp" to campamento.tarifaDiariaClp,
+            "latitud" to campamento.latitud,
+            "longitud" to campamento.longitud
         )
 
         db.collection(COLLECTION).add(map)
@@ -171,7 +185,9 @@ object CampamentoRepository {
             "tipoTerreno" to campamento.tipoTerreno,
             "permiteFogata" to campamento.permiteFogata,
             "aguaPotable" to campamento.aguaPotable,
-            "tarifaDiariaClp" to campamento.tarifaDiariaClp
+            "tarifaDiariaClp" to campamento.tarifaDiariaClp,
+            "latitud" to campamento.latitud,
+            "longitud" to campamento.longitud
         )
 
         db.collection(COLLECTION).document(campamento.id).set(map)

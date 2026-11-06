@@ -19,6 +19,7 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.simon.campsandmountain.R
+import com.simon.campsandmountain.data.importer.CsvBatchImporter
 import com.simon.campsandmountain.data.model.Campamento
 import com.simon.campsandmountain.data.repository.AuthRepository
 import com.simon.campsandmountain.data.repository.CampamentoRepository
@@ -49,15 +50,41 @@ class CampamentosFragment : Fragment() {
 
         tvEmpty = view.findViewById(R.id.tvEmptyCampamentos)
         etSearch = view.findViewById(R.id.etSearchCampamento)
+        val btnCsv: MaterialButton = view.findViewById(R.id.btnImportarCsvCampamentos)
         val rv: RecyclerView = view.findViewById(R.id.rvCampamentos)
         val fab: FloatingActionButton = view.findViewById(R.id.fabAddCampamento)
 
         val canManage = AuthRepository.canManageRefugiosAndCampamentos()
         if (!canManage) {
             fab.visibility = View.GONE
+            btnCsv.visibility = View.GONE
         } else {
             fab.visibility = View.VISIBLE
+            btnCsv.visibility = View.VISIBLE
             fab.setOnClickListener { showCampamentoFormDialog(null) }
+            btnCsv.setOnClickListener {
+                AlertDialog.Builder(requireContext())
+                    .setTitle("📥 Importar Catálogo de Campamentos (CSV)")
+                    .setMessage("¿Deseas cargar masivamente los campamentos del dataset 'campamentos_oficiales_chile.csv' a Cloud Firestore usando OpenCSV y WriteBatch?")
+                    .setPositiveButton("Importar") { _, _ ->
+                        lifecycleScope.launch {
+                            Toast.makeText(requireContext(), "Procesando lote de escritura en Firestore...", Toast.LENGTH_SHORT).show()
+                            val res = CsvBatchImporter.importCsvFromAssetsToFirestore(
+                                context = requireContext(),
+                                assetFileName = "campamentos_oficiales_chile.csv",
+                                collectionName = "Campamentos"
+                            )
+                            if (res.isSuccess) {
+                                val count = res.getOrDefault(0)
+                                Toast.makeText(requireContext(), "¡Se importaron $count campamentos exitosamente a Cloud Firestore!", Toast.LENGTH_LONG).show()
+                            } else {
+                                Toast.makeText(requireContext(), "Error al importar CSV: ${res.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                    .setNegativeButton("Cancelar", null)
+                    .show()
+            }
         }
 
         adapter = CampamentoAdapter(

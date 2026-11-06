@@ -27,7 +27,9 @@ object RefugioRepository {
             estado = EstadoRefugio.ABIERTO,
             precioNocheClp = 0,
             ubicacionSector = "Circuito W, Parque Nacional Torres del Paine",
-            telefonoContacto = "+56 61 222 5986"
+            telefonoContacto = "+56 61 222 5986",
+            latitud = -51.2582,
+            longitud = -72.9734
         ),
         Refugio(
             id = "",
@@ -37,7 +39,9 @@ object RefugioRepository {
             estado = EstadoRefugio.ABIERTO,
             precioNocheClp = 0,
             ubicacionSector = "Valle del Volcán, San José de Maipo",
-            telefonoContacto = "+56 2 2861 1234"
+            telefonoContacto = "+56 2 2861 1234",
+            latitud = -33.8031,
+            longitud = -70.0381
         ),
         Refugio(
             id = "",
@@ -47,7 +51,9 @@ object RefugioRepository {
             estado = EstadoRefugio.ABIERTO,
             precioNocheClp = 0,
             ubicacionSector = "Ladera Sur Volcán Osorno, Puerto Varas",
-            telefonoContacto = "+56 65 223 3445"
+            telefonoContacto = "+56 65 223 3445",
+            latitud = -41.1118,
+            longitud = -72.5029
         )
     )
 
@@ -84,6 +90,8 @@ object RefugioRepository {
                             val precioNocheClp = (doc.getLong("precioNocheClp") ?: 0L).toInt()
                             val ubicacionSector = doc.getString("ubicacionSector") ?: ""
                             val telefonoContacto = doc.getString("telefonoContacto") ?: ""
+                            val latitud = doc.getDouble("latitud") ?: 0.0
+                            val longitud = doc.getDouble("longitud") ?: 0.0
 
                             val item = Refugio(
                                 id = id,
@@ -93,7 +101,9 @@ object RefugioRepository {
                                 estado = estado,
                                 precioNocheClp = precioNocheClp,
                                 ubicacionSector = ubicacionSector,
-                                telefonoContacto = telefonoContacto
+                                telefonoContacto = telefonoContacto,
+                                latitud = latitud,
+                                longitud = longitud
                             )
                             newList.add(item)
                         } catch (e: Exception) {
@@ -122,7 +132,9 @@ object RefugioRepository {
                 "estado" to refugio.estado.name,
                 "precioNocheClp" to 0,
                 "ubicacionSector" to refugio.ubicacionSector,
-                "telefonoContacto" to refugio.telefonoContacto
+                "telefonoContacto" to refugio.telefonoContacto,
+                "latitud" to refugio.latitud,
+                "longitud" to refugio.longitud
             )
             db.collection(COLLECTION).add(map)
         }
@@ -143,7 +155,9 @@ object RefugioRepository {
             "estado" to refugio.estado.name,
             "precioNocheClp" to 0,
             "ubicacionSector" to refugio.ubicacionSector,
-            "telefonoContacto" to refugio.telefonoContacto
+            "telefonoContacto" to refugio.telefonoContacto,
+            "latitud" to refugio.latitud,
+            "longitud" to refugio.longitud
         )
 
         db.collection(COLLECTION).add(map)
@@ -173,7 +187,9 @@ object RefugioRepository {
             "estado" to refugio.estado.name,
             "precioNocheClp" to 0,
             "ubicacionSector" to refugio.ubicacionSector,
-            "telefonoContacto" to refugio.telefonoContacto
+            "telefonoContacto" to refugio.telefonoContacto,
+            "latitud" to refugio.latitud,
+            "longitud" to refugio.longitud
         )
 
         db.collection(COLLECTION).document(refugio.id).set(map)

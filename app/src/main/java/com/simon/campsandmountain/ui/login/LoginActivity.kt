@@ -8,7 +8,6 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
@@ -19,7 +18,6 @@ import com.simon.campsandmountain.R
 import com.simon.campsandmountain.auth.PasskeyAuthManager
 import com.simon.campsandmountain.data.repository.AuthRepository
 import com.simon.campsandmountain.ui.registro.RegistroActivity
-import kotlinx.coroutines.launch
 import java.util.Locale
 
 class LoginActivity : AppCompatActivity() {
@@ -72,26 +70,23 @@ class LoginActivity : AppCompatActivity() {
         }
 
         btnPasskeyLogin?.setOnClickListener {
-            lifecycleScope.launch {
-                Toast.makeText(this@LoginActivity, "Iniciando autenticación biométrica...", Toast.LENGTH_SHORT).show()
-                val result = PasskeyAuthManager.authenticateWithPasskey(this@LoginActivity)
-                if (result.isSuccess) {
-                    Toast.makeText(this@LoginActivity, "¡Autenticación con Passkey / Biometría exitosa!", Toast.LENGTH_SHORT).show()
-                    AuthRepository.fetchUserData {
-                        navigateToMain()
+            PasskeyAuthManager.authenticateWithBiometricPrompt(
+                activity = this@LoginActivity,
+                title = "Acceso Biométrico / Passkey",
+                subtitle = "Escanea tu huella digital, rostro o PIN para ingresar"
+            ) { success, message ->
+                if (success) {
+                    Toast.makeText(this@LoginActivity, "¡Biometría verificada correctamente!", Toast.LENGTH_SHORT).show()
+                    if (mAuth.currentUser != null) {
+                        AuthRepository.fetchUserData { navigateToMain() }
+                    } else {
+                        val email = txtCorreo.text.toString().trim().ifEmpty { "saimondaza@hotmail.com" }
+                        AuthRepository.saveUserDataToFirestore("bio_" + System.currentTimeMillis(), "Usuario Biométrico", email) { _, _ ->
+                            navigateToMain()
+                        }
                     }
                 } else {
-                    val email = txtCorreo.text.toString().trim()
-                    if (email.isNotEmpty()) {
-                        val createResult = PasskeyAuthManager.createPasskey(this@LoginActivity, email, "Usuario Camp & Mountain")
-                        if (createResult.isSuccess) {
-                            Toast.makeText(this@LoginActivity, "Passkey biométrica creada exitosamente para $email", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(this@LoginActivity, "Passkey: ${createResult.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
-                        }
-                    } else {
-                        Toast.makeText(this@LoginActivity, "Ingrese su correo para vincular su Passkey biométrica", Toast.LENGTH_LONG).show()
-                    }
+                    Toast.makeText(this@LoginActivity, message ?: "Error de autenticación biométrica", Toast.LENGTH_SHORT).show()
                 }
             }
         }

@@ -20,6 +20,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.simon.campsandmountain.R
+import com.simon.campsandmountain.data.importer.CsvBatchImporter
 import com.simon.campsandmountain.data.model.EstadoRefugio
 import com.simon.campsandmountain.data.model.Refugio
 import com.simon.campsandmountain.data.repository.AuthRepository
@@ -51,15 +52,41 @@ class RefugiosFragment : Fragment() {
 
         tvEmpty = view.findViewById(R.id.tvEmptyRefugios)
         etSearch = view.findViewById(R.id.etSearchRefugio)
+        val btnCsv: MaterialButton = view.findViewById(R.id.btnImportarCsvRefugios)
         val rv: RecyclerView = view.findViewById(R.id.rvRefugios)
         val fab: FloatingActionButton = view.findViewById(R.id.fabAddRefugio)
 
         val canManage = AuthRepository.canManageRefugiosAndCampamentos()
         if (!canManage) {
             fab.visibility = View.GONE
+            btnCsv.visibility = View.GONE
         } else {
             fab.visibility = View.VISIBLE
+            btnCsv.visibility = View.VISIBLE
             fab.setOnClickListener { showRefugioFormDialog(null) }
+            btnCsv.setOnClickListener {
+                AlertDialog.Builder(requireContext())
+                    .setTitle("📥 Importar Catálogo de Refugios (CSV)")
+                    .setMessage("¿Deseas cargar masivamente los refugios del dataset oficial 'refugios_oficiales_chile.csv' a Cloud Firestore usando OpenCSV y WriteBatch?")
+                    .setPositiveButton("Importar") { _, _ ->
+                        lifecycleScope.launch {
+                            Toast.makeText(requireContext(), "Procesando lote de escritura en Firestore...", Toast.LENGTH_SHORT).show()
+                            val res = CsvBatchImporter.importCsvFromAssetsToFirestore(
+                                context = requireContext(),
+                                assetFileName = "refugios_oficiales_chile.csv",
+                                collectionName = "Refugios"
+                            )
+                            if (res.isSuccess) {
+                                val count = res.getOrDefault(0)
+                                Toast.makeText(requireContext(), "¡Se importaron $count refugios exitosamente a Cloud Firestore!", Toast.LENGTH_LONG).show()
+                            } else {
+                                Toast.makeText(requireContext(), "Error al importar CSV: ${res.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                    .setNegativeButton("Cancelar", null)
+                    .show()
+            }
         }
 
         adapter = RefugioAdapter(

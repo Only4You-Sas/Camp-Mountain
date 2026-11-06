@@ -3,6 +3,9 @@ package com.simon.campsandmountain.auth
 import android.content.Context
 import android.util.Base64
 import android.util.Log
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
 import androidx.credentials.CreatePublicKeyCredentialRequest
 import androidx.credentials.CreatePublicKeyCredentialResponse
 import androidx.credentials.CredentialManager
@@ -14,13 +17,14 @@ import androidx.credentials.exceptions.CreateCredentialCancellationException
 import androidx.credentials.exceptions.CreateCredentialException
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.fragment.app.FragmentActivity
 import org.json.JSONArray
 import org.json.JSONObject
 import java.security.SecureRandom
 
 /**
- * Gestor profesional de autenticación nativa con Passkeys y Biometría
- * utilizando la API androidx.credentials (Credential Manager).
+ * Gestor profesional de autenticación nativa con Passkeys y Biometría (Huella / Rostro)
+ * utilizando las APIs androidx.credentials y androidx.biometric de Android.
  */
 object PasskeyAuthManager {
 
@@ -29,7 +33,7 @@ object PasskeyAuthManager {
     private const val RP_NAME = "Camp & Mountain"
 
     /**
-     * Genera un desafío criptográfico aleatorio de prueba (Challenge Base64).
+     * Genera un desafío criptográfico aleatorio Base64.
      */
     fun generateRandomChallenge(): String {
         val randomBytes = ByteArray(32)
@@ -38,7 +42,66 @@ object PasskeyAuthManager {
     }
 
     /**
-     * Crea una Passkey en el dispositivo del usuario utilizando Credential Manager y Biometría.
+     * Autentica al usuario de forma 100% nativa con la Huella Digital / Rostro / PIN del dispositivo
+     * usando BiometricPrompt de Android.
+     */
+    fun authenticateWithBiometricPrompt(
+        activity: FragmentActivity,
+        title: String = "Autenticación Biométrica",
+        subtitle: String = "Usa tu huella digital o rostro para iniciar sesión",
+        onResult: (Boolean, String?) -> Unit
+    ) {
+        val biometricManager = BiometricManager.from(activity)
+        val canAuthenticate = biometricManager.canAuthenticate(
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                    BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                    BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        )
+
+        if (canAuthenticate != BiometricManager.BIOMETRIC_SUCCESS) {
+            onResult(false, "El dispositivo no tiene biometría configurada o activa.")
+            return
+        }
+
+        val executor = ContextCompat.getMainExecutor(activity)
+        val biometricPrompt = BiometricPrompt(
+            activity,
+            executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    Log.d(TAG, "Autenticación biométrica exitosa.")
+                    onResult(true, "Autenticación biométrica exitosa.")
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    Log.w(TAG, "Error de biometría ($errorCode): $errString")
+                    onResult(false, errString.toString())
+                }
+
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    Log.w(TAG, "Fallo de lectura biométrica.")
+                }
+            }
+        )
+
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(title)
+            .setSubtitle(subtitle)
+            .setAllowedAuthenticators(
+                BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                        BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                        BiometricManager.Authenticators.DEVICE_CREDENTIAL
+            )
+            .build()
+
+        biometricPrompt.authenticate(promptInfo)
+    }
+
+    /**
+     * Crea una Passkey WebAuthn en el dispositivo mediante Credential Manager.
      */
     suspend fun createPasskey(
         context: Context,
@@ -65,11 +128,11 @@ object PasskeyAuthManager {
                 put("pubKeyCredParams", JSONArray().apply {
                     put(JSONObject().apply {
                         put("type", "public-key")
-                        put("alg", -7) // ES256
+                        put("alg", -7)
                     })
                     put(JSONObject().apply {
                         put("type", "public-key")
-                        put("alg", -257) // RS256
+                        put("alg", -257)
                     })
                 })
                 put("timeout", 60000)
@@ -84,22 +147,19 @@ object PasskeyAuthManager {
             val createRequest = CreatePublicKeyCredentialRequest(requestJson)
             val response = credentialManager.createCredential(context, createRequest) as CreatePublicKeyCredentialResponse
             
-            Log.d(TAG, "Passkey creada exitosamente en el dispositivo.")
+            Log.d(TAG, "Passkey creada exitosamente.")
             Result.success(response)
         } catch (e: CreateCredentialCancellationException) {
-            Log.w(TAG, "El usuario canceló la creación de la Passkey.")
             Result.failure(Exception("Creación de Passkey cancelada por el usuario."))
         } catch (e: CreateCredentialException) {
-            Log.e(TAG, "Error al crear la Passkey", e)
             Result.failure(e)
         } catch (e: Exception) {
-            Log.e(TAG, "Error inesperado al crear Passkey", e)
             Result.failure(e)
         }
     }
 
     /**
-     * Autentica al usuario consultando la Passkey guardada localmente mediante Biometría.
+     * Autentica con Passkey WebAuthn mediante Credential Manager.
      */
     suspend fun authenticateWithPasskey(
         context: Context,
@@ -121,20 +181,15 @@ object PasskeyAuthManager {
 
             val credential = response.credential
             if (credential is PublicKeyCredential) {
-                val authenticationResponseJson = credential.authenticationResponseJson
-                Log.d(TAG, "Autenticación exitosa con Passkey: $authenticationResponseJson")
-                Result.success(authenticationResponseJson)
+                Result.success(credential.authenticationResponseJson)
             } else {
-                Result.failure(Exception("El tipo de credencial retornado no es PublicKeyCredential."))
+                Result.failure(Exception("Tipo de credencial no soportado."))
             }
         } catch (e: GetCredentialCancellationException) {
-            Log.w(TAG, "El usuario canceló la autenticación con Passkey.")
             Result.failure(Exception("Autenticación cancelada."))
         } catch (e: GetCredentialException) {
-            Log.e(TAG, "Error al consultar la Passkey", e)
             Result.failure(e)
         } catch (e: Exception) {
-            Log.e(TAG, "Error inesperado en autenticación Passkey", e)
             Result.failure(e)
         }
     }

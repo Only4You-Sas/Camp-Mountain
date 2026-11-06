@@ -1,5 +1,7 @@
 package com.simon.campsandmountain.ui.refugios
 
+import android.content.Intent
+import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -40,7 +42,7 @@ class RefugioAdapter(
         val context = holder.itemView.context
 
         holder.tvNombre.text = item.nombre
-        holder.tvUbicacion.text = "📍 ${item.ubicacionSector}"
+        holder.tvUbicacion.text = "📍 ${item.ubicacionSector} 🗺️"
         holder.tvAltitud.text = "⛰️ ${item.altitudMsnm} m.s.n.m."
         holder.tvCamas.text = "🛏️ ${item.capacidadCamas} camas"
         holder.tvPrecio.text = "🆓 Gratuito (Sin Costo)"
@@ -54,6 +56,23 @@ class RefugioAdapter(
         }
         val color = ContextCompat.getColor(context, colorRes)
         holder.tvEstado.setTextColor(color)
+
+        // Al presionar la ubicación se abre Google Maps / Mapas del teléfono
+        holder.tvUbicacion.setOnClickListener {
+            val query = if (item.latitud != 0.0 && item.longitud != 0.0) {
+                "geo:${item.latitud},${item.longitud}?q=${item.latitud},${item.longitud}(${Uri.encode(item.nombre)})"
+            } else {
+                "geo:0,0?q=${Uri.encode(item.ubicacionSector)}"
+            }
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(query))
+                context.startActivity(intent)
+            } catch (_: Exception) {
+                val webQuery = "https://www.google.com/maps/search/?api=1&query=${Uri.encode(item.ubicacionSector)}"
+                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(webQuery))
+                context.startActivity(webIntent)
+            }
+        }
 
         val canManage = AuthRepository.canManageRefugiosAndCampamentos()
         if (canManage) {

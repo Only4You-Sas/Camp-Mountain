@@ -57,9 +57,10 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.android.gms:play-services-auth:21.3.0")
 
-    // Task 1: Passkeys & Credentials Manager
+    // Task 1: Passkeys, Credentials Manager & Biometrics
     implementation("androidx.credentials:credentials:1.3.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("androidx.biometric:biometric:1.1.0")
 
     // Task 2: Retrofit & Gson
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
